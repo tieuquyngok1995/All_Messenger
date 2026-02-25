@@ -1,0 +1,10 @@
+{
+  "profiles": {
+    "All_Messenger (Package)": {
+      "commandName": "MsixPackage"
+    },
+    "All_Messenger (Unpackaged)": {
+      "commandName": "Project"
+    }
+  }
+}
