@@ -2,6 +2,7 @@
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using System;
+using System.Diagnostics;
 using Windows.Foundation;
 using Windows.UI.WebUI;
 
@@ -68,14 +69,28 @@ public abstract class WebViewPageBase : Page
 
     private static void ConfigureWebView(CoreWebView2 core)
     {
+        // Mở link trong chat bằng trình duyệt mặc định của Windows
+        core.NewWindowRequested += (s, e) =>
+        {
+            e.Handled = true;
+            if (!string.IsNullOrEmpty(e.Uri))
+            {
+                Process.Start(new ProcessStartInfo
+                {
+                    FileName = e.Uri,
+                    UseShellExecute = true
+                });
+            }
+        };
+
         // Tắt các tính năng trình duyệt không cần thiết để giảm nhiễu và tối ưu hiệu năng
         var settings = core.Settings;
         settings.IsStatusBarEnabled = false;
         settings.IsZoomControlEnabled = false;
         settings.IsBuiltInErrorPageEnabled = false;
         settings.IsPinchZoomEnabled = false;
-        settings.IsGeneralAutofillEnabled = false;
-        settings.IsPasswordAutosaveEnabled = false;
+        settings.IsGeneralAutofillEnabled = true;
+        settings.IsPasswordAutosaveEnabled = true;
         settings.AreBrowserAcceleratorKeysEnabled = false;
         settings.IsSwipeNavigationEnabled = false;
     }
