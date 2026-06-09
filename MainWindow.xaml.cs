@@ -1,17 +1,19 @@
-﻿using Microsoft.UI;
+﻿using All_Messenger.Helper;
+using All_Messenger.Pages;
+using Microsoft.UI;
 using Microsoft.UI.Windowing;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
+using Microsoft.UI.Xaml.Input;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
-using All_Messenger.Helper;
-using All_Messenger.Pages;
+using Windows.System;
 using WinRT.Interop;
-using Microsoft.UI.Xaml.Media.Animation;
 
 namespace All_Messenger
 {
@@ -20,7 +22,7 @@ namespace All_Messenger
     /// </summary>
     public sealed partial class MainWindow : Window
     {
-        private AppWindow _appWindow = null!;
+        private readonly AppWindow _appWindow;
 
         // ── Theme ────────────────────────────────────────────────────────────────
         private const string ThemeKey = "AppTheme";
@@ -60,8 +62,8 @@ namespace All_Messenger
         private readonly BitmapImage _teamsLight;
         private readonly BitmapImage _teamsDark;
 
-        private Dictionary<string, (FrameworkElement Page, string AppId)> _tabs = null!;
-        private readonly Dictionary<string, CustomServerPage> _customPages = new();
+        private readonly Dictionary<string, (FrameworkElement Page, string AppId)> _tabs = null!;
+        private readonly Dictionary<string, CustomServerPage> _customPages = [];
         private string _activeTab = string.Empty;
 
         public MainWindow()
@@ -103,6 +105,12 @@ namespace All_Messenger
             };
 
             Services.NotificationService.Instance.TabBadgeChanged += OnTabBadgeChanged;
+
+            // Đăng ký KeyDown sau khi Content sẵn sàng
+            this.Content.KeyDown += Window_KeyDown;
+            this.Content.KeyUp += Window_KeyUp;
+
+            NavView.Loaded += (_, _) => UpdateNavItemTooltips();
         }
 
         private async void OnWindowLoaded(object sender, RoutedEventArgs e)
@@ -121,6 +129,59 @@ namespace All_Messenger
 
             await HideSplashAsync();
             WelcomeView.Visibility = Visibility.Visible;
+        }
+
+        private bool _isTabHeld = false;
+
+        private void Window_KeyDown(object sender, KeyRoutedEventArgs e)
+        {
+            // Track Alt key held
+            if (e.Key == VirtualKey.Menu)
+            {
+                _isTabHeld = true;
+                e.Handled = true;
+                return;
+            }
+
+            if (!_isTabHeld) return;
+
+            var menuItems = NavView.MenuItems.OfType<NavigationViewItem>().ToList();
+
+            int currentIndex = NavView.SelectedItem is NavigationViewItem selectedItem ? menuItems.IndexOf(selectedItem) : -1;
+
+            switch (e.Key)
+            {
+                // Alt + ` (~) 
+                case (VirtualKey)0xC0:
+                    int nextIndex = (currentIndex + 1) % menuItems.Count;
+                    NavView.SelectedItem = menuItems[nextIndex];
+                    e.Handled = true;
+                    break;
+
+                case VirtualKey.Number1: case VirtualKey.NumberPad1: SelectTabByIndex(menuItems, 0); e.Handled = true; break;
+                case VirtualKey.Number2: case VirtualKey.NumberPad2: SelectTabByIndex(menuItems, 1); e.Handled = true; break;
+                case VirtualKey.Number3: case VirtualKey.NumberPad3: SelectTabByIndex(menuItems, 2); e.Handled = true; break;
+                case VirtualKey.Number4: case VirtualKey.NumberPad4: SelectTabByIndex(menuItems, 3); e.Handled = true; break;
+                case VirtualKey.Number5: case VirtualKey.NumberPad5: SelectTabByIndex(menuItems, 4); e.Handled = true; break;
+                case VirtualKey.Number6: case VirtualKey.NumberPad6: SelectTabByIndex(menuItems, 5); e.Handled = true; break;
+                case VirtualKey.Number7: case VirtualKey.NumberPad7: SelectTabByIndex(menuItems, 6); e.Handled = true; break;
+                case VirtualKey.Number8: case VirtualKey.NumberPad8: SelectTabByIndex(menuItems, 7); e.Handled = true; break;
+                case VirtualKey.Number9: case VirtualKey.NumberPad9: SelectTabByIndex(menuItems, 8); e.Handled = true; break;
+            }
+        }
+
+        private void Window_KeyUp(object sender, KeyRoutedEventArgs e)
+        {
+            if (e.Key == VirtualKey.Tab)
+            {
+                _isTabHeld = false;
+            }
+        }
+
+        private void SelectTabByIndex(List<NavigationViewItem> menuItems, int index)
+        {
+            if (index < menuItems.Count)
+                NavView.SelectedItem = menuItems[index];
         }
 
         private Task HideSplashAsync()
@@ -246,6 +307,21 @@ namespace All_Messenger
             }
         }
 
+        private void UpdateNavItemTooltips()
+        {
+            var menuItems = NavView.MenuItems
+                .OfType<NavigationViewItem>()
+                .ToList();
+
+            for (int i = 0; i < menuItems.Count; i++)
+            {
+                var item = menuItems[i];
+                string name = item.Content?.ToString() ?? string.Empty;
+                string shortcut = $"Tab + {i + 1}";
+                ToolTipService.SetToolTip(item, $"{name}\n({shortcut})");
+            }
+        }
+
         private (WebView2? WebView, bool IsReady) GetWebViewInfo(string appId) => appId switch
         {
             AppIdZalo => (ZaloPage.WebView, ZaloPage.IsReady),
@@ -277,8 +353,10 @@ namespace All_Messenger
         {
             if (_tabs.ContainsKey(info.Id)) return;
 
-            var page = new CustomServerPage(info);
-            page.Visibility = Visibility.Collapsed;
+            var page = new CustomServerPage(info)
+            {
+                Visibility = Visibility.Collapsed
+            };
             ContentGrid.Children.Add(page);
 
             var navItem = new NavigationViewItem
@@ -292,6 +370,7 @@ namespace All_Messenger
                 }
             };
             NavView.MenuItems.Add(navItem);
+            UpdateNavItemTooltips();
 
             _customPages[info.Id] = page;
             _tabs[info.Id] = (page, info.Id);
