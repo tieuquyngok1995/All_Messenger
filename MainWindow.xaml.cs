@@ -317,7 +317,7 @@ namespace All_Messenger
             {
                 var item = menuItems[i];
                 string name = item.Content?.ToString() ?? string.Empty;
-                string shortcut = $"Tab + {i + 1}";
+                string shortcut = $"Alt + {i + 1}";
                 ToolTipService.SetToolTip(item, $"{name}\n({shortcut})");
             }
         }
