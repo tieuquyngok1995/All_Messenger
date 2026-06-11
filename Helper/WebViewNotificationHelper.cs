@@ -16,30 +16,34 @@ public static class WebViewNotificationHelper
     public static async Task InjectNotificationHookAsync(CoreWebView2 webView)
     {
         const string script = """
-            (function() {
+            (function () {
                 if (window.__allMessengerHooked) return;
                 window.__allMessengerHooked = true;
 
                 function postNotification(title, body, icon) {
                     try {
-                        window.chrome.webview.postMessage(JSON.stringify({
-                            type: 'notification',
-                            title: title || '',
-                            body:  body  || '',
-                            icon:  icon  || ''
-                        }));
-                    } catch(e) {
-                        console.warn('[AllMessenger] postMessage failed:', e);
+                        window.chrome.webview.postMessage(
+                            JSON.stringify({
+                                type: "notification",
+                                title: title || "",
+                                body: body || "",
+                                icon: icon || "",
+                            }),
+                        );
+                    } catch (e) {
+                        console.warn("[AllMessenger] postMessage failed:", e);
                     }
                 }
 
                 function postBadge(count) {
                     try {
-                        window.chrome.webview.postMessage(JSON.stringify({
-                            type: 'badge',
-                            count: count
-                        }));
-                    } catch(e) {}
+                        window.chrome.webview.postMessage(
+                            JSON.stringify({
+                                type: "badge",
+                                count: count,
+                            }),
+                        );
+                    } catch (e) { }
                 }
 
                 // ── Hook 1: window.Notification constructor ──────────────────────────────
@@ -47,39 +51,35 @@ public static class WebViewNotificationHelper
                 const _OriginalNotification = window.Notification;
 
                 function HookedNotification(title, options) {
-                    postNotification(
-                        title,
-                        options && options.body ? options.body : '',
-                        options && options.icon ? options.icon : ''
-                    );
+                    postNotification(title, options && options.body ? options.body : "", options && options.icon ? options.icon : "");
 
                     // Trả về mock object thay vì gọi API thật.
                     // WebView2 không thể hiển thị OS notification trực tiếp → gọi thật sẽ
                     // kích hoạt onerror trong trang (Mattermost notifications.ts:92).
                     const mock = Object.create(_OriginalNotification.prototype);
-                    mock.title  = title || '';
-                    mock.body   = options && options.body  ? options.body  : '';
-                    mock.icon   = options && options.icon  ? options.icon  : '';
-                    mock.tag    = options && options.tag   ? options.tag   : '';
-                    mock.data   = options && options.data  ? options.data  : null;
+                    mock.title = title || "";
+                    mock.body = options && options.body ? options.body : "";
+                    mock.icon = options && options.icon ? options.icon : "";
+                    mock.tag = options && options.tag ? options.tag : "";
+                    mock.data = options && options.data ? options.data : null;
                     mock.silent = options && options.silent != null ? options.silent : false;
-                    mock.onclick  = null;
-                    mock.onclose  = null;
-                    mock.onerror  = null;
-                    mock.onshow   = null;
-                    mock.close = function() {
-                        if (typeof mock.onclose === 'function') mock.onclose(new Event('close'));
+                    mock.onclick = null;
+                    mock.onclose = null;
+                    mock.onerror = null;
+                    mock.onshow = null;
+                    mock.close = function () {
+                        if (typeof mock.onclose === "function") mock.onclose(new Event("close"));
                     };
                     // Thông báo cho trang biết notification đã "hiện" thành công
-                    setTimeout(function() {
-                        if (typeof mock.onshow === 'function') mock.onshow(new Event('show'));
+                    setTimeout(function () {
+                        if (typeof mock.onshow === "function") mock.onshow(new Event("show"));
                     }, 0);
                     return mock;
                 }
 
                 HookedNotification.prototype = _OriginalNotification.prototype;
-                Object.defineProperty(HookedNotification, 'permission', { get: () => 'granted' });
-                HookedNotification.requestPermission = () => Promise.resolve('granted');
+                Object.defineProperty(HookedNotification, "permission", { get: () => "granted" });
+                HookedNotification.requestPermission = () => Promise.resolve("granted");
                 HookedNotification.maxActions = _OriginalNotification.maxActions || 2;
                 window.Notification = HookedNotification;
 
@@ -87,15 +87,10 @@ public static class WebViewNotificationHelper
                 // Bắt thông báo của Teams & các app gọi showNotification() từ page/worker context.
                 // (Service Worker chạy trong thread riêng – không thể hook trực tiếp,
                 //  nhưng nhiều app vẫn gọi qua registration object trong page context.)
-                if (window.ServiceWorkerRegistration &&
-                    ServiceWorkerRegistration.prototype.showNotification) {
+                if (window.ServiceWorkerRegistration && ServiceWorkerRegistration.prototype.showNotification) {
                     const _origShow = ServiceWorkerRegistration.prototype.showNotification;
-                    ServiceWorkerRegistration.prototype.showNotification = function(title, options) {
-                        postNotification(
-                            title,
-                            options && options.body ? options.body : '',
-                            options && options.icon ? options.icon : ''
-                        );
+                    ServiceWorkerRegistration.prototype.showNotification = function (title, options) {
+                        postNotification(title, options && options.body ? options.body : "", options && options.icon ? options.icon : "");
                         return _origShow.call(this, title, options);
                     };
                 }
@@ -106,49 +101,79 @@ public static class WebViewNotificationHelper
                 // Chỉ fire khi count TĂNG so với lần cuối → tránh noise lúc load lần đầu.
                 let _prevCount = -1;
 
-                function onTitleChange() {
-                    const match = document.title.match(/^\((\d+)\)/);
-                    const count = match ? parseInt(match[1], 10) : 0;
+                function getUnreadCount() {
+                    const titleMatch = document.title.match(/^\((\d+)\)/);
+
+                    const count = titleMatch ? parseInt(titleMatch[1], 10) : 0;
+
+                    // Mattermost channel unread
+                    // <li class="SidebarChannel unread">
+                    const channelCount = document.querySelectorAll("li.SidebarChannel.unread").length;
+
+                    return count + channelCount;
+                }
+
+                function updateBadge() {
+                    const count = getUnreadCount();
 
                     if (_prevCount === -1) {
-                        // Lần đầu: đồng bộ badge từ title hiện tại, không hiện toast
                         _prevCount = count;
                         postBadge(count);
                         return;
                     }
 
-                    // Luôn đồng bộ badge tuyệt đối từ title
+                    if (count === _prevCount) {
+                        return;
+                    }
+
                     postBadge(count);
 
-                    // Chỉ hiện toast khi có tin mới
+                    // Toast nếu có unread
                     if (count > _prevCount) {
-                        postNotification('New messages', '', '');
+                        postNotification("New messages", "", "");
                     }
+
                     _prevCount = count;
                 }
 
                 function attachTitleObserver() {
                     const titleEl = document.querySelector('title');
                     if (!titleEl) return false;
-                    new MutationObserver(onTitleChange).observe(titleEl, { childList: true, characterData: true, subtree: true });
+                    new MutationObserver(updateBadge).observe(titleEl, { childList: true, characterData: true, subtree: true });
+                    updateBadge();
                     return true;
                 }
 
                 if (!attachTitleObserver()) {
                     // Script chạy trước khi HTML được parse → <title> chưa tồn tại.
                     // Dùng subtree:true để quan sát toàn bộ cây DOM cho đến khi <title> xuất hiện.
-                    var _rootObserver = new MutationObserver(function() {
+                    var _rootObserver = new MutationObserver(function () {
                         if (attachTitleObserver()) _rootObserver.disconnect();
                     });
                     _rootObserver.observe(document.documentElement || document.getRootNode(), { childList: true, subtree: true });
 
                     // DOMContentLoaded làm fallback cuối cùng
-                    document.addEventListener('DOMContentLoaded', function() {
-                        if (attachTitleObserver()) _rootObserver.disconnect();
-                    }, { once: true });
+                    document.addEventListener(
+                        "DOMContentLoaded",
+                        function () {
+                            if (attachTitleObserver()) _rootObserver.disconnect();
+                        },
+                        { once: true },
+                    );
                 }
 
+                // Chọn vùng để lắng nghe và bắt sự kiện khi channel unread
+                document.addEventListener(
+                    "DOMContentLoaded",
+                    function () {
+                        updateBadge();
+                        const sidebar = document.querySelector("#SidebarContainer");
+                        if (sidebar) new MutationObserver(updateBadge).observe(sidebar, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+                    },
+                    { once: true },
+                );
             })();
+            
             """;
 
         await webView.AddScriptToExecuteOnDocumentCreatedAsync(script);
