@@ -1,4 +1,4 @@
-﻿using All_Messenger.Helper;
+﻿using All_in_One_Messenger.Helper;
 using Microsoft.UI.Dispatching;
 using Microsoft.Windows.AppNotifications;
 using Microsoft.Windows.AppNotifications.Builder;
@@ -12,21 +12,23 @@ using System.Runtime.InteropServices;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
 
-namespace All_Messenger.Services;
+namespace All_in_One_Messenger.Services;
 
 public sealed class NotificationService
 {
-    // ── Setting keys (dùng chung với SettingPage) ──────────────────────────────
+    // Setting keys (used in conjunction with SettingPage)
     public const string NotificationModeKey = "NotificationMode";
     public const string NotificationModeToast = "Toast";
     public const string NotificationModeSilent = "Silent";
 
-    // ── Singleton ──────────────────────────────────────────────────────────────
-    private static readonly Lazy<NotificationService> _instance =
-        new(() => new NotificationService());
+    // Fired on the UI thread whenever a tab's badge count changes (appId, count)
+    public event Action<string, int>? TabBadgeChanged;
+
+    // Singleton
+    private static readonly Lazy<NotificationService> _instance = new(() => new NotificationService());
     public static NotificationService Instance => _instance.Value;
 
-    // BadgeUpdateManager chỉ hoạt động với packaged app (có package identity)
+    // BadgeUpdateManager only works with packaged apps (those with the identity package).
     private static readonly bool _isPackaged = CheckIsPackaged();
     private static bool CheckIsPackaged()
     {
@@ -34,7 +36,19 @@ public sealed class NotificationService
         catch { return false; }
     }
 
-    // ── Trạng thái ──────────────────────────────────────────────────────────────────
+    // P/Invoke required
+    [DllImport("user32.dll")]
+    private static extern bool SetForegroundWindow(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    private static extern bool IsIconic(IntPtr hWnd);
+
+    private const int SW_RESTORE = 9;
+
+    // Status
     private readonly ConcurrentDictionary<string, bool> _sessionMap = new();
     private readonly ConcurrentDictionary<string, int> _badgeCounts = new();
 
@@ -43,48 +57,35 @@ public sealed class NotificationService
     private bool _isWindowActive = false;
     private string _activeTabAppId = string.Empty;
 
-    // Fired on the UI thread whenever a tab's badge count changes (appId, count)
-    public event Action<string, int>? TabBadgeChanged;
     private NotificationService() { }
 
-    // ── Khởi tạo ──────────────────────────────────────────────────────────────
     public void Initialize(DispatcherQueue dispatcherQueue, nint hwnd)
     {
         _dispatcherQueue = dispatcherQueue;
         _hwnd = hwnd;
+
+        AppNotificationManager.Default.NotificationInvoked += OnNotificationInvoked;
+        AppNotificationManager.Default.Register();
     }
-    // ── Tab đang hiển thị ────────────────────────────────────────────────────
+
+    private void OnNotificationInvoked(AppNotificationManager sender, AppNotificationActivatedEventArgs args)
+    {
+        if (_hwnd == 0) return;
+
+        if (IsIconic(_hwnd))
+            ShowWindow(_hwnd, SW_RESTORE);
+
+        SetForegroundWindow(_hwnd);
+    }
+
     public void SetActiveTab(string appId) => _activeTabAppId = appId;
 
-    // ── Trạng thái cửa sổ ───────────────────────────────────────────────────
     public void SetWindowActive(bool active)
     {
         _isWindowActive = active;
         if (active) ClearAllBadges();
     }
 
-    public void ClearAllBadges()
-    {
-        foreach (var key in _badgeCounts.Keys)
-            _badgeCounts[key] = 0;
-        UpdateTaskbarBadge();
-    }
-    // ── Quản lý session ─────────────────────────────────────────────────
-    public void SetSession(string appId, bool hasSession)
-    {
-        _sessionMap[appId] = hasSession;
-    }
-
-    public bool HasSession(string appId) =>
-        _sessionMap.TryGetValue(appId, out bool v) && v;
-
-    // ── Chế độ thông báo ──────────────────────────────────────────────────
-    private static string GetNotificationMode()
-    {
-        return AppSettings.Get(NotificationModeKey) ?? NotificationModeToast;
-    }
-
-    // ── Quản lý badge ───────────────────────────────────────────────────────────
     public void ClearBadge(string appId)
     {
         _badgeCounts[appId] = 0;
@@ -92,12 +93,10 @@ public sealed class NotificationService
         _dispatcherQueue?.TryEnqueue(() => TabBadgeChanged?.Invoke(appId, 0));
     }
 
-    // Đặt badge tuyệt đối từ title (Hook 3) — không hiển thị toast
     public void SetBadgeDirect(string appId, int count)
     {
         if (!HasSession(appId)) return;
 
-        // Taskbar badge: không hiển thị khi cửa sổ đang focus
         if (_isWindowActive)
             _badgeCounts[appId] = 0;
         else
@@ -105,17 +104,120 @@ public sealed class NotificationService
 
         UpdateTaskbarBadge();
 
-        // Tab nav badge: hiển thị nếu tab không phải tab đang active (bất kể window focus)
-        if (appId != _activeTabAppId)
-            _dispatcherQueue?.TryEnqueue(() => TabBadgeChanged?.Invoke(appId, count));
+        if (appId != _activeTabAppId) _dispatcherQueue?.TryEnqueue(() => TabBadgeChanged?.Invoke(appId, count));
     }
 
-    private void IncrementBadge(string appId)
+    private void ClearAllBadges()
     {
-        _badgeCounts.AddOrUpdate(appId, 1, (_, old) => old + 1);
+        foreach (var key in _badgeCounts.Keys) _badgeCounts[key] = 0;
         UpdateTaskbarBadge();
     }
 
+    public void SetSession(string appId, bool hasSession) => _sessionMap[appId] = hasSession;
+
+    public bool HasSession(string appId) => _sessionMap.TryGetValue(appId, out bool v) && v;
+
+    /// <summary>
+    /// Notification entry point.
+    /// </summary>
+    public void HandleWebNotification(string appId, string title, string body, string? icon = null)
+    {
+        if (!HasSession(appId)) return;
+        if (_isWindowActive) return;
+
+        if (GetNotificationMode() != NotificationModeSilent)
+            ShowToast(appId, title, body, icon);
+    }
+
+    private static string GetNotificationMode() => AppSettings.Get(NotificationModeKey) ?? NotificationModeToast;
+
+    /// <summary>
+    /// Show toast notification.
+    /// </summary>
+    private void ShowToast(string appId, string title, string body, string? icon)
+    {
+        void Show()
+        {
+            try
+            {
+                string displayName = GetAppDisplayName(appId);
+                var displayTitle = !string.IsNullOrWhiteSpace(title) ? $"[{displayName}] {title}" : displayName;
+                var builder = new AppNotificationBuilder().AddArgument("appId", appId).AddArgument("action", "focus").AddText(displayTitle);
+
+                if (!string.IsNullOrWhiteSpace(body))
+                    builder.AddText(body);
+
+                if (!string.IsNullOrWhiteSpace(icon) &&
+                    Uri.TryCreate(icon, UriKind.Absolute, out var iconUri))
+                    builder.SetAppLogoOverride(iconUri, AppNotificationImageCrop.Circle);
+
+                AppNotificationManager.Default.Show(builder.BuildNotification());
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Log($"NotificationService ShowToast Exception", ex.Message);
+            }
+        }
+        if (_dispatcherQueue is not null)
+            _dispatcherQueue.TryEnqueue(Show);
+        else
+            Show();
+    }
+    /// <summary>
+    /// Get the display name from the settings (for a custom server)
+    /// </summary>
+    /// <param name="appId"></param>
+    /// <returns></returns>
+    private static string GetAppDisplayName(string appId)
+    {
+        // The built-in apps already have the correct names as app IDs
+        if (appId is "Teams" or "Messenger" or "Zalo")
+            return appId;
+
+        // Custom server: appId is a short GUID → look up the name from settings
+        var servers = AppSettings.GetCustomServers();
+        var match = servers.Find(s => s.Id == appId);
+        return match?.Name is { Length: > 0 } name ? name : appId;
+    }
+
+    /// <summary>
+    /// Creating badge icons using GDI+
+    /// </summary>
+    /// <param name="count"></param>
+    /// <returns></returns>
+    private static nint CreateBadgeIcon(int count)
+    {
+        const int size = 32;
+        using var bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb);
+        using var g = Graphics.FromImage(bmp);
+        g.SmoothingMode = SmoothingMode.AntiAlias;
+        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
+        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
+        g.Clear(Color.Transparent);
+
+        // Red circle
+        using var bgBrush = new SolidBrush(Color.FromArgb(220, 53, 53));
+        g.FillEllipse(bgBrush, 1, 1, size - 2, size - 2);
+
+        // Digits
+        string text = count > 99 ? "99+" : count.ToString();
+        float fontSize = text.Length > 2 ? 9f : text.Length > 1 ? 11f : 14f;
+        using var font = new Font("Segoe UI", fontSize, FontStyle.Bold, GraphicsUnit.Point);
+        using var textBrush = new SolidBrush(Color.White);
+        var sf = new StringFormat
+        {
+            Alignment = StringAlignment.Center,
+            LineAlignment = StringAlignment.Center,
+            FormatFlags = StringFormatFlags.NoWrap
+        };
+        g.DrawString(text, font, textBrush, new RectangleF(0, 0, size, size), sf);
+
+        return bmp.GetHicon();
+    }
+
+    /// <summary>
+    /// Update the number of Badge notifications on the Taskbar.
+    /// </summary>
     private void UpdateTaskbarBadge()
     {
         int total = 0;
@@ -141,8 +243,7 @@ public sealed class NotificationService
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine(
-                        $"[NotificationService] Badge update failed: {ex.Message}");
+                    AppLogger.Log($"NotificationService UpdateTaskbarBadge Exception badge update failed", ex.Message);
                 }
             }
 
@@ -153,7 +254,7 @@ public sealed class NotificationService
         }
         else
         {
-            // Unpackaged: dùng ITaskbarList3 SetOverlayIcon
+            // Unpackaged: use ITaskbarList3 SetOverlayIcon
             void ApplyOverlay()
             {
                 try
@@ -169,8 +270,7 @@ public sealed class NotificationService
                 }
                 catch (Exception ex)
                 {
-                    System.Diagnostics.Debug.WriteLine(
-                        $"[NotificationService] Overlay icon failed: {ex.Message}");
+                    AppLogger.Log($"NotificationService UpdateTaskbarBadge Exception overlay icon failed", ex.Message);
                 }
             }
 
@@ -181,42 +281,11 @@ public sealed class NotificationService
         }
     }
 
-    // ── Tạo badge icon bằng GDI+ ────────────────────────────────────────────────
-    private static nint CreateBadgeIcon(int count)
-    {
-        const int size = 32;
-        using var bmp = new Bitmap(size, size, PixelFormat.Format32bppArgb);
-        using var g = Graphics.FromImage(bmp);
-        g.SmoothingMode = SmoothingMode.AntiAlias;
-        g.InterpolationMode = InterpolationMode.HighQualityBicubic;
-        g.TextRenderingHint = TextRenderingHint.ClearTypeGridFit;
-        g.Clear(Color.Transparent);
-
-        // Nền tròn đỏ
-        using var bgBrush = new SolidBrush(Color.FromArgb(220, 53, 53));
-        g.FillEllipse(bgBrush, 1, 1, size - 2, size - 2);
-
-        // Chữ số
-        string text = count > 99 ? "99+" : count.ToString();
-        float fontSize = text.Length > 2 ? 9f : text.Length > 1 ? 11f : 14f;
-        using var font = new Font("Segoe UI", fontSize, System.Drawing.FontStyle.Bold, GraphicsUnit.Point);
-        using var textBrush = new SolidBrush(Color.White);
-        var sf = new StringFormat
-        {
-            Alignment = StringAlignment.Center,
-            LineAlignment = StringAlignment.Center,
-            FormatFlags = StringFormatFlags.NoWrap
-        };
-        g.DrawString(text, font, textBrush, new RectangleF(0, 0, size, size), sf);
-
-        return bmp.GetHicon();
-    }
-
-    // ── ITaskbarList3 COM interop ────────────────────────────────────────────────
+    #region ITaskbarList3 COM interop
     [DllImport("user32.dll")]
     private static extern bool DestroyIcon(nint hIcon);
 
-    [ComImport, Guid("ea1afb91-9e28-4b86-90e9-9e9f8a5eefaf")]
+    [ComImport, Guid("EA1AFB91-9E28-4B86-90E9-9E9F8A5EEFAF")]
     [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     private interface ITaskbarList3
     {
@@ -240,67 +309,8 @@ public sealed class NotificationService
         void SetThumbnailClip(nint hwnd, nint prcClip);
     }
 
-    [ComImport, Guid("56fdf344-fd6d-11d0-958a-006097c9a090")]
+    [ComImport, Guid("56FDF344-FD6D-11D0-958A-006097C9A090")]
     [ClassInterface(ClassInterfaceType.None)]
     private class TaskbarListInstance { }
-
-    // ── Điểm nhập thông báo ─────────────────────────────────────────────────────
-    public void HandleWebNotification(string appId, string title, string body, string? icon = null)
-    {
-        if (!HasSession(appId)) return;
-        if (_isWindowActive) return;
-
-        if (GetNotificationMode() != NotificationModeSilent)
-            ShowToast(appId, title, body, icon);
-    }
-
-    // ── Lấy tên hiển thị từ settings (cho custom server) ─────────────────────────
-    private static string GetAppDisplayName(string appId)
-    {
-        // Các app tích hợp sẵn đã có tên đúng làm appId
-        if (appId is "Teams" or "Messenger" or "Zalo")
-            return appId;
-
-        // Custom server: appId là short GUID → tra tên từ settings
-        var servers = All_Messenger.Helper.AppSettings.GetCustomServers();
-        var match = servers.Find(s => s.Id == appId);
-        return match?.Name is { Length: > 0 } name ? name : appId;
-    }
-
-    // ── Hiển thị toast ───────────────────────────────────────────────────────────
-    private void ShowToast(string appId, string title, string body, string? icon)
-    {
-        void Show()
-        {
-            try
-            {
-                string displayName = GetAppDisplayName(appId);
-                var displayTitle = !string.IsNullOrWhiteSpace(title)
-                    ? $"[{displayName}] {title}" : displayName;
-
-                var builder = new AppNotificationBuilder()
-                    .AddArgument("appId", appId)
-                    .AddText(displayTitle);
-
-                if (!string.IsNullOrWhiteSpace(body))
-                    builder.AddText(body);
-
-                if (!string.IsNullOrWhiteSpace(icon) &&
-                    Uri.TryCreate(icon, UriKind.Absolute, out var iconUri))
-                    builder.SetAppLogoOverride(iconUri, AppNotificationImageCrop.Circle);
-
-                AppNotificationManager.Default.Show(builder.BuildNotification());
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine(
-                    $"[NotificationService] Toast failed: {ex.Message}");
-            }
-        }
-
-        if (_dispatcherQueue is not null)
-            _dispatcherQueue.TryEnqueue(Show);
-        else
-            Show();
-    }
+    #endregion
 }
