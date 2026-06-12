@@ -88,7 +88,7 @@ public static class WebViewProfileHelper
             try { Directory.Delete(profilePath, recursive: true); }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[WebViewProfileHelper] Cannot delete '{profileName}': {ex.Message}");
+                AppLogger.Log($"WebViewProfileHelper DeleteProfileData:{profileName} Exception", ex.Message);
             }
         }
     }

@@ -243,7 +243,7 @@ public static class WebViewNotificationHelper
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine($"[WebViewNotificationHelper:{appId}] Parse error: {ex.Message}");
+            AppLogger.Log($"WebViewNotificationHelper HandleWebMessage:{appId} Exception", ex.Message);
         }
     }
 
@@ -258,12 +258,10 @@ public static class WebViewNotificationHelper
         {
             bool loggedIn = isLoggedInUrl(sender.Source);
 
-            // reset False=false: only set true when login is detected, do not reset when 
+            // reset=false: only set true when login is detected, do not reset when 
             // navigate to a different domain (e.g., facebook.com link preview in Messenger)
             if (loggedIn || resetOnFalse)
                 NotificationService.Instance.SetSession(appId, loggedIn);
-
-            System.Diagnostics.Debug.WriteLine($"[SessionDetector:{appId}] url={sender.Source} → loggedIn={loggedIn} (reset={resetOnFalse})");
         };
     }
 }
