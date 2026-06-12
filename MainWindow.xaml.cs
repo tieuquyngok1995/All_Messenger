@@ -115,8 +115,8 @@ public sealed partial class MainWindow : Window
         Content.KeyUp += Window_KeyUp;
         Content.KeyDown += Window_KeyDown;
 
-        SettingPage.OnServersReordered += (_, _) => RebuildCustomNavItems();
         NavView.Loaded += (_, _) => UpdateNavItemTooltips();
+        SettingPage.OnServersReordered += (_, _) => RebuildCustomNavItems();
     }
 
     #region Events window load page
