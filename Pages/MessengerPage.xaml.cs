@@ -1,9 +1,9 @@
-using All_Messenger.Helper;
+using All_in_One_Messenger.Helper;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using System;
 
-namespace All_Messenger.Pages;
+namespace All_in_One_Messenger.Pages;
 
 /// <summary>
 /// An empty page that can be used on its own or navigated to within a Frame.
@@ -22,9 +22,6 @@ public sealed partial class MessengerPage : WebViewPageBase
 
     protected override void OnCoreWebView2Ready(CoreWebView2 core)
     {
-        // Ch? set session=true khi x?c nh?n ?ang ? trang Messenger ?? login.
-        // Kh?ng reset v? false khi navigate sang facebook.com (link preview, v.v.)
-        // ?? tr?nh m?t notification trong l?c ??.
         WebViewNotificationHelper.AttachSessionDetector(
             AppId, core,
             url => url.Contains("messenger.com") &&

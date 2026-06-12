@@ -1,9 +1,9 @@
-using All_Messenger.Helper;
+using All_in_One_Messenger.Helper;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.Web.WebView2.Core;
 using System;
 
-namespace All_Messenger.Pages;
+namespace All_in_One_Messenger.Pages;
 
 /// <summary>
 /// An empty page that can be used on its own or navigated to within a Frame.
@@ -22,10 +22,6 @@ public sealed partial class ZaloPage : WebViewPageBase
 
     protected override void OnCoreWebView2Ready(CoreWebView2 core)
     {
-        // Login/OAuth c?a Zalo n?m tr?n id.zalo.me, kh?ng ph?i chat.zalo.me
-        // ¨ ch? c?n check chat.zalo.me l? ?? ?? x?c ??nh logged-in.
-        // resetOnFalse=false: tr?nh reset session khi Zalo navigate sang
-        // zalo.me (sticker store, b?i vi?t, v.v.) ho?c link ngo?i.
         WebViewNotificationHelper.AttachSessionDetector(
             AppId, core,
             url => url.Contains("chat.zalo.me"),
