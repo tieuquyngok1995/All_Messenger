@@ -1,17 +1,17 @@
-﻿using All_Messenger.Services;
+﻿using All_in_One_Messenger.Services;
 using Microsoft.Web.WebView2.Core;
 using System;
 using System.Text.Json;
 using System.Threading.Tasks;
 
-namespace All_Messenger.Helper;
+namespace All_in_One_Messenger.Helper;
 
 public static class WebViewNotificationHelper
 {
-    // ── Inject script ──────────────────────────────────────────────────────────────
-    /// <summary>
-    /// Gọi sau EnsureCoreWebView2Async, TRƯỜC khi set Source.
-    /// Chặn bắt window.Notification API và gửi message về WinUI.
+    /// <summary> 
+    /// Inject script
+    /// Call EnsureCoreWebView2Async after, BEFORE set the Source. 
+    /// Block the window.Notification API and send messages to WinUI.
     /// </summary>
     public static async Task InjectNotificationHookAsync(CoreWebView2 webView)
     {
@@ -20,184 +20,201 @@ public static class WebViewNotificationHelper
                 if (window.__allMessengerHooked) return;
                 window.__allMessengerHooked = true;
 
-                function postNotification(title, body, icon) {
+                // ── Helpers ──────────────────────────────────────────────────────────────
+
+                function postMessage(payload) {
                     try {
-                        window.chrome.webview.postMessage(
-                            JSON.stringify({
-                                type: "notification",
-                                title: title || "",
-                                body: body || "",
-                                icon: icon || "",
-                            }),
-                        );
+                        window.chrome.webview.postMessage(JSON.stringify(payload));
                     } catch (e) {
                         console.warn("[AllMessenger] postMessage failed:", e);
                     }
                 }
 
+                function postNotification(title, body, icon) {
+                    postMessage({
+                        type: "notification",
+                        title: title || "",
+                        body: body || "",
+                        icon: icon || "",
+                    });
+                }
+
                 function postBadge(count) {
-                    try {
-                        window.chrome.webview.postMessage(
-                            JSON.stringify({
-                                type: "badge",
-                                count: count,
-                            }),
-                        );
-                    } catch (e) { }
+                    postMessage({ type: "badge", count });
                 }
 
                 // ── Hook 1: window.Notification constructor ──────────────────────────────
-                // Bắt Messenger, Zalo, Mattermost (dùng new Notification() từ page context).
+                // Capture Messenger, Zalo, Mattermost (using new Notification() from page context).
                 const _OriginalNotification = window.Notification;
 
-                function HookedNotification(title, options) {
-                    postNotification(title, options && options.body ? options.body : "", options && options.icon ? options.icon : "");
+                function HookedNotification(title, options = {}) {
+                    postNotification(title, options.body, options.icon);
 
-                    // Trả về mock object thay vì gọi API thật.
-                    // WebView2 không thể hiển thị OS notification trực tiếp → gọi thật sẽ
-                    // kích hoạt onerror trong trang (Mattermost notifications.ts:92).
-                    const mock = Object.create(_OriginalNotification.prototype);
-                    mock.title = title || "";
-                    mock.body = options && options.body ? options.body : "";
-                    mock.icon = options && options.icon ? options.icon : "";
-                    mock.tag = options && options.tag ? options.tag : "";
-                    mock.data = options && options.data ? options.data : null;
-                    mock.silent = options && options.silent != null ? options.silent : false;
-                    mock.onclick = null;
-                    mock.onclose = null;
-                    mock.onerror = null;
-                    mock.onshow = null;
-                    mock.close = function () {
-                        if (typeof mock.onclose === "function") mock.onclose(new Event("close"));
-                    };
-                    // Thông báo cho trang biết notification đã "hiện" thành công
-                    setTimeout(function () {
+                    // Returns a mock object instead of calling the actual API.
+                    // WebView2 cannot display OS notifications directly → calling the actual API will
+                    const mock = Object.assign(Object.create(_OriginalNotification.prototype), {
+                        title: title || "",
+                        body: options.body || "",
+                        icon: options.icon || "",
+                        tag: options.tag || "",
+                        data: options.data ?? null,
+                        silent: options.silent ?? false,
+                        onclick: null,
+                        onclose: null,
+                        onerror: null,
+                        onshow: null,
+                        close() {
+                            if (typeof this.onclose === "function")
+                                this.onclose(new Event("close"));
+                        },
+                    });
+
+                    // Inform the page that the notification has successfully "displayed"
+                    setTimeout(() => {
                         if (typeof mock.onshow === "function") mock.onshow(new Event("show"));
                     }, 0);
+
                     return mock;
                 }
 
                 HookedNotification.prototype = _OriginalNotification.prototype;
-                Object.defineProperty(HookedNotification, "permission", { get: () => "granted" });
+                Object.defineProperty(HookedNotification, "permission", {
+                    get: () => "granted",
+                });
                 HookedNotification.requestPermission = () => Promise.resolve("granted");
                 HookedNotification.maxActions = _OriginalNotification.maxActions || 2;
                 window.Notification = HookedNotification;
 
-                // ── Hook 2: ServiceWorkerRegistration.showNotification ───────────────────────────────────
-                // Bắt thông báo của Teams & các app gọi showNotification() từ page/worker context.
-                // (Service Worker chạy trong thread riêng – không thể hook trực tiếp,
-                //  nhưng nhiều app vẫn gọi qua registration object trong page context.)
-                if (window.ServiceWorkerRegistration && ServiceWorkerRegistration.prototype.showNotification) {
-                    const _origShow = ServiceWorkerRegistration.prototype.showNotification;
-                    ServiceWorkerRegistration.prototype.showNotification = function (title, options) {
-                        postNotification(title, options && options.body ? options.body : "", options && options.icon ? options.icon : "");
+                // ── Hook 2: ServiceWorkerRegistration.showNotification ───────────────────
+                // Capture notifications from Teams and apps calling showNotification() from the page/worker context.
+                // (Service Worker runs in its own thread – cannot be hooked directly,
+                // but many apps still call it via the registration object in the page context.)
+                const _origShow = ServiceWorkerRegistration?.prototype?.showNotification;
+                if (_origShow) {
+                    ServiceWorkerRegistration.prototype.showNotification = function (
+                        title,
+                        options = {},
+                    ) {
+                        postNotification(title, options.body, options.icon);
                         return _origShow.call(this, title, options);
                     };
                 }
 
-                // ── Hook 3: Theo dõi badge số trên document.title ────────────────────────────────────
-                // Fallback cho Teams (thường không dùng new Notification() khi app đang mở):
-                // title thay đổi thành "(N) Microsoft Teams", "(N) Messenger", "(N) Zalo".
-                // Chỉ fire khi count TĂNG so với lần cuối → tránh noise lúc load lần đầu.
+                // ── Hook 3: Track the badge number in document.title ────────────────────────
+                // Fallback for Teams (usually not using new Notification() when the app is open):
+                // title changes to "(N) Microsoft Teams", "(N) Messenger", "(N) Zalo".
+                // Only fire when the count CHANGES from the last count; send toast when the count INCREASES.
                 let _prevCount = -1;
 
                 function getUnreadCount() {
-                    const titleMatch = document.title.match(/^\((\d+)\)/);
-
-                    const count = titleMatch ? parseInt(titleMatch[1], 10) : 0;
+                    const titleCount = parseInt(
+                        document.title.match(/^\((\d+)\)/)?.[1] ?? "0",
+                        10,
+                    );
 
                     // Mattermost channel unread
                     // <li class="SidebarChannel unread">
-                    const channelCount = document.querySelectorAll("li.SidebarChannel.unread").length;
+                    const channelCount = document.querySelectorAll(
+                        "li.SidebarChannel.unread",
+                    ).length;
 
-                    return count + channelCount;
+                    return titleCount + channelCount;
                 }
 
                 function updateBadge() {
                     const count = getUnreadCount();
 
-                    if (_prevCount === -1) {
-                        _prevCount = count;
-                        postBadge(count);
-                        return;
-                    }
+                    if (count === _prevCount) return;
 
-                    if (count === _prevCount) {
-                        return;
-                    }
-
-                    postBadge(count);
-
-                    // Toast nếu có unread
-                    if (count > _prevCount) {
-                        postNotification("New messages", "", "");
-                    }
+                    // First run: sync badge without sending toast
+                    const isFirstRun = _prevCount === -1;
+                    const increased = !isFirstRun && count > _prevCount;
 
                     _prevCount = count;
+                    postBadge(count);
+
+                    if (increased) postNotification("New messages", "", "");
                 }
 
+                // ── Gắn observer lên <title> ──────────────────────────────────────────────
+
                 function attachTitleObserver() {
-                    const titleEl = document.querySelector('title');
+                    const titleEl = document.querySelector("title");
                     if (!titleEl) return false;
-                    new MutationObserver(updateBadge).observe(titleEl, { childList: true, characterData: true, subtree: true });
+                    new MutationObserver(updateBadge).observe(titleEl, {
+                        childList: true,
+                        characterData: true,
+                        subtree: true,
+                    });
                     updateBadge();
                     return true;
                 }
 
                 if (!attachTitleObserver()) {
-                    // Script chạy trước khi HTML được parse → <title> chưa tồn tại.
-                    // Dùng subtree:true để quan sát toàn bộ cây DOM cho đến khi <title> xuất hiện.
-                    var _rootObserver = new MutationObserver(function () {
-                        if (attachTitleObserver()) _rootObserver.disconnect();
+                    // Script runs before HTML is parsed → <title> does not exist.
+                    // Use subtree:true to observe the entire DOM tree until <title> appears.
+                    const rootObserver = new MutationObserver(() => {
+                        if (attachTitleObserver()) rootObserver.disconnect();
                     });
-                    _rootObserver.observe(document.documentElement || document.getRootNode(), { childList: true, subtree: true });
+                    rootObserver.observe(document.documentElement || document.getRootNode(), {
+                        childList: true,
+                        subtree: true,
+                    });
 
-                    // DOMContentLoaded làm fallback cuối cùng
+                    // DOMContentLoaded as the final fallback
                     document.addEventListener(
                         "DOMContentLoaded",
-                        function () {
-                            if (attachTitleObserver()) _rootObserver.disconnect();
+                        () => {
+                            if (attachTitleObserver()) rootObserver.disconnect();
                         },
                         { once: true },
                     );
                 }
 
-                // Chọn vùng để lắng nghe và bắt sự kiện khi channel unread
+                // ── Attach observer to Mattermost sidebar ──────────────────────────────────
+
+                // Listen for unread classes on Sidebar Channels when the DOM is ready.
                 document.addEventListener(
                     "DOMContentLoaded",
-                    function () {
+                    () => {
                         updateBadge();
                         const sidebar = document.querySelector("#SidebarContainer");
-                        if (sidebar) new MutationObserver(updateBadge).observe(sidebar, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+                        if (sidebar) {
+                            new MutationObserver(updateBadge).observe(sidebar, {
+                                subtree: true,
+                                childList: true,
+                                attributes: true,
+                                attributeFilter: ["class"],
+                            });
+                        }
                     },
                     { once: true },
                 );
-            })();
-            
+            })();             
             """;
 
         await webView.AddScriptToExecuteOnDocumentCreatedAsync(script);
     }
 
-    // ── Xử lý quyền thông báo ─────────────────────────────────────────────────────
-    // Tự động cấp quyền thông báo khi trang web yêu cầu
-    public static void AllowNotificationPermission(
-        CoreWebView2 sender,
-        CoreWebView2PermissionRequestedEventArgs args)
+    /// <summary>
+    /// Handling Notification Permissions
+    /// Automatically grant notification permissions when requested by the website
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="args"></param>
+    public static void AllowNotificationPermission(CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args)
     {
         if (args.PermissionKind == CoreWebView2PermissionKind.Notifications)
             args.State = CoreWebView2PermissionState.Allow;
     }
 
-    // ── Xử lý message từ WebView ─────────────────────────────────────────────────────────
     /// <summary>
-    /// Gọi trong WebMessageReceived handler của từng trang.
-    /// Tự động chuyển tiếp sang NotificationService nếu message đúng định dạng.
-    /// </summary>
-    /// <param name="appId">Ví dụ: "Teams", "Messenger", "Zalo"</param>
-    public static void HandleWebMessage(
-        string appId,
-        CoreWebView2WebMessageReceivedEventArgs e)
+    /// Handling messages from WebView
+    /// Call in the WebMessageReceived handler of each page.
+    /// Automatically forward to NotificationService if the message is in the correct format.
+    /// </summary> 
+    /// <param name="appId">For example: "Teams", "Messenger", "Zalo"</param>
+    public static void HandleWebMessage(string appId, CoreWebView2WebMessageReceivedEventArgs e)
     {
         try
         {
@@ -207,7 +224,7 @@ public static class WebViewNotificationHelper
             var root = doc.RootElement;
 
             if (!root.TryGetProperty("type", out var typeProp)) return;
-            string msgType = typeProp.GetString() ?? "";
+            string msgType = typeProp.GetString() ?? string.Empty;
 
             if (msgType == "badge")
             {
@@ -218,41 +235,35 @@ public static class WebViewNotificationHelper
 
             if (msgType != "notification") return;
 
-            string title = root.TryGetProperty("title", out var t) ? t.GetString() ?? "" : "";
-            string body = root.TryGetProperty("body", out var b) ? b.GetString() ?? "" : "";
-            string icon = root.TryGetProperty("icon", out var i) ? i.GetString() ?? "" : "";
+            string title = root.TryGetProperty("title", out var t) ? t.GetString() ?? string.Empty : string.Empty;
+            string body = root.TryGetProperty("body", out var b) ? b.GetString() ?? string.Empty : string.Empty;
+            string icon = root.TryGetProperty("icon", out var i) ? i.GetString() ?? string.Empty : string.Empty;
 
             NotificationService.Instance.HandleWebNotification(appId, title, body, icon);
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"[WebViewNotificationHelper:{appId}] Parse error: {ex.Message}");
+            System.Diagnostics.Debug.WriteLine($"[WebViewNotificationHelper:{appId}] Parse error: {ex.Message}");
         }
     }
 
-    // ── Theo dõi session qua URL ──────────────────────────────────────────────────────
     /// <summary>
-    /// Hook vào NavigationCompleted để tự phát hiện trạng thái đăng nhập dựa theo URL.
-    /// Mỗi app có logic URL khác nhau — truyền vào qua predicate.
+    /// Tracking sessions via URL
+    /// Hook into NavigationCompleted to automatically detect login status based on the URL.
+    /// Each app has different URL logic — passed in via predicate.
     /// </summary>
-    public static void AttachSessionDetector(
-        string appId,
-        CoreWebView2 webView,
-        Func<string, bool> isLoggedInUrl,
-        bool resetOnFalse = true)
+    public static void AttachSessionDetector(string appId, CoreWebView2 webView, Func<string, bool> isLoggedInUrl, bool resetOnFalse = true)
     {
         webView.NavigationCompleted += (sender, args) =>
         {
             bool loggedIn = isLoggedInUrl(sender.Source);
 
-            // resetOnFalse=false: chỉ set true khi phát hiện đăng nhập, không reset khi
-            // navigate sang domain khác (ví dụ: facebook.com link preview trong Messenger)
+            // reset False=false: only set true when login is detected, do not reset when 
+            // navigate to a different domain (e.g., facebook.com link preview in Messenger)
             if (loggedIn || resetOnFalse)
                 NotificationService.Instance.SetSession(appId, loggedIn);
 
-            System.Diagnostics.Debug.WriteLine(
-                $"[SessionDetector:{appId}] url={sender.Source} → loggedIn={loggedIn} (reset={resetOnFalse})");
+            System.Diagnostics.Debug.WriteLine($"[SessionDetector:{appId}] url={sender.Source} → loggedIn={loggedIn} (reset={resetOnFalse})");
         };
     }
 }

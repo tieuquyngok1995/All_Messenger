@@ -4,9 +4,8 @@ using Microsoft.Web.WebView2.Core;
 using System;
 using System.Diagnostics;
 using Windows.Foundation;
-using Windows.UI.WebUI;
 
-namespace All_Messenger.Helper;
+namespace All_in_One_Messenger.Helper;
 
 public abstract class WebViewPageBase : Page
 {
@@ -25,6 +24,9 @@ public abstract class WebViewPageBase : Page
         Unloaded += OnUnloaded;
     }
 
+    /// <summary>
+    /// Handling the initialization of the webview.
+    /// </summary>
     protected async void InitWebView()
     {
         try
@@ -47,29 +49,32 @@ public abstract class WebViewPageBase : Page
             // Hook cho page-specific setup (session detector, v.v.)
             OnCoreWebView2Ready(core);
 
-            // Apply app theme vào WebView ngay khi khởi tạo xong
+            // Apply the app theme to the WebView immediately after initialization
             ApplyColorSchemeFromCurrentTheme();
 
-            core.NavigationCompleted += (s, e) =>
-            {
-                if (!_isReady) _isReady = true;
-            };
+            core.NavigationCompleted += (s, e) => { if (!_isReady) _isReady = true; };
 
             WebView.Source = StartUri;
         }
         catch (Exception ex)
         {
-            System.Diagnostics.Debug.WriteLine(
-                $"[InitWebView:{AppId}] Failed: {ex.Message}");
+            Debug.WriteLine($"[InitWebView:{AppId}] Failed: {ex.Message}");
         }
     }
 
-    // Override để thêm logic riêng từng trang (ví dụ: session detector, cấu hình đặc biệt)
+    /// <summary>
+    /// Override to add page-specific logic (e.g., session detector, special configuration).
+    /// </summary>
+    /// <param name="core"></param>
     protected virtual void OnCoreWebView2Ready(CoreWebView2 core) { }
 
+    /// <summary>
+    /// Configure for WebView.
+    /// </summary>
+    /// <param name="core"></param>
     private static void ConfigureWebView(CoreWebView2 core)
     {
-        // Mở link trong chat bằng trình duyệt mặc định của Windows
+        // Open the link in the chat using the default Windows browser
         core.NewWindowRequested += (s, e) =>
         {
             e.Handled = true;
@@ -83,7 +88,7 @@ public abstract class WebViewPageBase : Page
             }
         };
 
-        // Tắt các tính năng trình duyệt không cần thiết để giảm nhiễu và tối ưu hiệu năng
+        // Disable unnecessary browser features to reduce interference and optimize performance
         var settings = core.Settings;
         settings.IsStatusBarEnabled = false;
         settings.IsZoomControlEnabled = false;
@@ -95,7 +100,40 @@ public abstract class WebViewPageBase : Page
         settings.IsSwipeNavigationEnabled = false;
     }
 
-    // ── Đồng bộ theme ──────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Load and unload webview.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private void OnLoaded(object sender, RoutedEventArgs e)
+    {
+        ActualThemeChanged += OnActualThemeChanged;
+
+        if (App.MainWindow is null) return;
+
+        try
+        {
+            _visibilityHandler = (s, args) => { };
+
+            App.MainWindow.VisibilityChanged += _visibilityHandler;
+        }
+        catch (Exception ex)
+        {
+            Debug.WriteLine($"[OnLoaded] throw Exception: {ex.Message}");
+        }
+    }
+
+    private void OnUnloaded(object sender, RoutedEventArgs e)
+    {
+        ActualThemeChanged -= OnActualThemeChanged;
+
+        if (App.MainWindow is not null && _visibilityHandler is not null)
+            App.MainWindow.VisibilityChanged -= _visibilityHandler;
+    }
+
+    /// <summary>
+    /// Theme synchronization
+    /// </summary>
     private void ApplyColorSchemeFromCurrentTheme()
     {
         if (WebView.CoreWebView2 is null) return;
@@ -107,37 +145,5 @@ public abstract class WebViewPageBase : Page
     private void OnActualThemeChanged(FrameworkElement sender, object args)
     {
         ApplyColorSchemeFromCurrentTheme();
-    }
-
-    private void OnLoaded(object sender, RoutedEventArgs e)
-    {
-        ActualThemeChanged += OnActualThemeChanged;
-
-        if (App.MainWindow is null) return;
-
-        try
-        {
-            _visibilityHandler = (s, args) =>
-            {
-                // Không suspend WebView khi ẩn cửa sổ — WebView phải tiếp tục
-                // chạy JS để nhận push notification qua hook và postMessage.
-                // Nếu suspend, các JS hook sẽ dừng → không có toast khi app bị ẩn.
-            };
-
-            App.MainWindow.VisibilityChanged += _visibilityHandler;
-        }
-        catch (Exception ex)
-        {
-            System.Diagnostics.Debug.WriteLine(
-                $"[OnLoaded] throw Exception: {ex.Message}");
-        }
-    }
-
-    private void OnUnloaded(object sender, RoutedEventArgs e)
-    {
-        ActualThemeChanged -= OnActualThemeChanged;
-
-        if (App.MainWindow is not null && _visibilityHandler is not null)
-            App.MainWindow.VisibilityChanged -= _visibilityHandler;
     }
 }
