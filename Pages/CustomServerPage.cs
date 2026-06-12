@@ -1,23 +1,21 @@
-using All_Messenger.Helper;
-using Microsoft.UI;
+using All_in_One_Messenger.Helper;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
 using Microsoft.Web.WebView2.Core;
 using System;
 
-namespace All_Messenger.Pages;
+namespace All_in_One_Messenger.Pages;
 
 /// <summary>
-/// Trang WebView tạo động cho một chat server tùy chỉnh.
-/// Không có file XAML — layout được tạo hoàn toàn bằng code.
+/// This WebView page dynamically creates a custom chat server.
 /// </summary>
-public sealed class CustomServerPage : WebViewPageBase
+public sealed partial class CustomServerPage : WebViewPageBase
 {
     private readonly WebView2 _webView;
     private readonly string _appId;
     private readonly Uri _startUri;
-    private Grid? _errorOverlay;
+    private readonly Grid? _errorOverlay;
 
     public override WebView2 WebView => _webView;
     public override string AppId => _appId;
@@ -28,12 +26,8 @@ public sealed class CustomServerPage : WebViewPageBase
         _appId = info.Id;
 
         _startUri = Uri.TryCreate(
-            info.Url.StartsWith("http", StringComparison.OrdinalIgnoreCase)
-                ? info.Url
-                : "https://" + info.Url,
-            UriKind.Absolute, out var uri)
-            ? uri
-            : new Uri("https://" + info.Url);
+            info.Url.StartsWith("http", StringComparison.OrdinalIgnoreCase) ? info.Url : "https://" + info.Url,
+            UriKind.Absolute, out var uri) ? uri : new Uri("https://" + info.Url);
 
         _webView = new WebView2
         {
@@ -51,19 +45,23 @@ public sealed class CustomServerPage : WebViewPageBase
         InitWebView();
     }
 
+    /// <summary>
+    /// Handling when CoreWebView2 is Ready.
+    /// </summary>
+    /// <param name="core"></param>
     protected override void OnCoreWebView2Ready(CoreWebView2 core)
     {
         core.NavigationCompleted += OnNavigationCompleted;
 
-        // Custom server không có URL cố định để phán đoán login,
-        // nên coi là đã có session ngay khi navigation thành công.
-        WebViewNotificationHelper.AttachSessionDetector(
-            _appId, core,
-            url => true,
-            resetOnFalse: false);
+        // Custom servers don't have a fixed URL to determine login,
+        // so assume a session is established as soon as navigation is successful.
+        WebViewNotificationHelper.AttachSessionDetector(_appId, core, url => true, resetOnFalse: false);
     }
 
-    /// <summary>Điều hướng WebView đến URL mới (dùng khi người dùng chỉnh sửa server từ Settings).</summary>
+    /// <summary>
+    /// Navigates the WebView to the new URL (used when the user edits the server from Settings).
+    /// </summary>
+    /// <param name="url"></param>
     public void NavigateTo(string url)
     {
         var uri = Uri.TryCreate(
@@ -76,9 +74,14 @@ public sealed class CustomServerPage : WebViewPageBase
             _webView.Source = uri;
     }
 
+    /// <summary>
+    /// Processing after navigator successful.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="args"></param>
     private void OnNavigationCompleted(CoreWebView2 sender, CoreWebView2NavigationCompletedEventArgs args)
     {
-        // Chỉ xử lý lần điều hướng đầu tiên hoặc khi URL là StartUri
+        // Only process the first navigation or when the URL is StartUri
         bool failed = !args.IsSuccess && IsConnectionError(args.WebErrorStatus);
 
         _webView.Visibility = failed ? Visibility.Collapsed : Visibility.Visible;
@@ -86,6 +89,11 @@ public sealed class CustomServerPage : WebViewPageBase
             _errorOverlay.Visibility = failed ? Visibility.Visible : Visibility.Collapsed;
     }
 
+    /// <summary>
+    /// Check for errors when connecting to the webview..
+    /// </summary>
+    /// <param name="status"></param>
+    /// <returns></returns>
     private static bool IsConnectionError(CoreWebView2WebErrorStatus status) => status is
         CoreWebView2WebErrorStatus.CannotConnect or
         CoreWebView2WebErrorStatus.HostNameNotResolved or
