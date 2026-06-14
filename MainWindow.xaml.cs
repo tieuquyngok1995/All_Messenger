@@ -91,8 +91,14 @@ public sealed partial class MainWindow : Window
         };
 
         // Load saved custom servers
-        foreach (var server in AppSettings.GetCustomServers())
+        var servers = AppSettings.GetCustomServers().ToList();
+        foreach (var server in servers)
             AddCustomServerTab(server);
+
+        WebViewProfileHelper.CleanupUnusedProfiles(
+            servers.Select(s => s.Id),
+            exclude: [AppIdTeams, AppIdMessenger, AppIdZalo]
+        );
 
         // InitializeWindow
         var hwnd = WindowNative.GetWindowHandle(this);
@@ -218,7 +224,7 @@ public sealed partial class MainWindow : Window
             }
             catch (Exception ex)
             {
-                AppLogger.Log("MainWindow Reload_Click Exception", ex.Message);
+                AppLogger.Log($"[MainWindow] Reload_Click: {entry.AppId} error: {ex.Message}", ex);
             }
         }
     }
@@ -430,7 +436,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            AppLogger.Log($"MainWindow OnTabShown:{appId} Exception", ex.Message);
+            AppLogger.Log($"MainWindow OnTabShown:{appId} error: {ex.Message}", ex);
         }
 
         if (!string.IsNullOrEmpty(appId))
@@ -457,7 +463,7 @@ public sealed partial class MainWindow : Window
         }
         catch (Exception ex)
         {
-            AppLogger.Log($"MainWindow OnTabHidden:{appId} Exception", ex.Message);
+            AppLogger.Log($"MainWindow OnTabHidden:{appId} error: {ex.Message}", ex);
         }
     }
 

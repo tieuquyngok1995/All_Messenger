@@ -1,6 +1,7 @@
 ﻿using Microsoft.Web.WebView2.Core;
 using System;
 using System.Collections.Concurrent;
+using System.Collections.Generic;
 using System.IO;
 using System.Threading;
 using System.Threading.Tasks;
@@ -10,8 +11,8 @@ namespace All_in_One_Messenger.Helper;
 public static class WebViewProfileHelper
 {
     // Cache environment by profile name — avoid recreating it every time you navigate
-    private static readonly ConcurrentDictionary<string, CoreWebView2Environment> _cache = new();
     private static readonly ConcurrentDictionary<string, SemaphoreSlim> _locks = new();
+    private static readonly ConcurrentDictionary<string, CoreWebView2Environment> _cache = new();
 
     // The root directory containing all profiles
     private static readonly string BasePath = Path.Combine(
@@ -59,11 +60,7 @@ public static class WebViewProfileHelper
                 ])
             };
 
-            var env = await CoreWebView2Environment.CreateWithOptionsAsync(
-                null,
-                profilePath,
-                options
-            );
+            var env = await CoreWebView2Environment.CreateWithOptionsAsync(null, profilePath, options);
 
             _cache[profileName] = env;
             return env;
@@ -71,6 +68,27 @@ public static class WebViewProfileHelper
         finally
         {
             sem.Release();
+        }
+    }
+
+    /// <summary>
+    /// Cleanup unused profiles.
+    /// </summary>
+    /// <param name="activeProfiles"></param>
+    /// <param name="exclude"></param>
+    public static void CleanupUnusedProfiles(IEnumerable<string> activeProfiles, string[] exclude)
+    {
+        if (!Directory.Exists(BasePath)) return;
+
+        var kept = new HashSet<string>(activeProfiles, StringComparer.OrdinalIgnoreCase);
+        foreach (var ex in exclude) kept.Add(ex);
+
+        foreach (var dir in Directory.GetDirectories(BasePath))
+        {
+            string name = Path.GetFileName(dir);
+            if (kept.Contains(name)) continue;
+
+            DeleteProfileData(name);
         }
     }
 
@@ -88,7 +106,7 @@ public static class WebViewProfileHelper
             try { Directory.Delete(profilePath, recursive: true); }
             catch (Exception ex)
             {
-                AppLogger.Log($"WebViewProfileHelper DeleteProfileData:{profileName} Exception", ex.Message);
+                AppLogger.Log($"[WebViewProfileHelper] DeleteProfileData:{profileName} error: {ex.Message}", ex);
             }
         }
     }

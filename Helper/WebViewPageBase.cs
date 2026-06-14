@@ -58,7 +58,7 @@ public abstract class WebViewPageBase : Page
         }
         catch (Exception ex)
         {
-            AppLogger.Log($"WebViewPageBase InitWebView:{AppId} Exception", ex.Message);
+            AppLogger.Log($"[WebViewPageBase] InitWebView:{AppId} error: {ex.Message}", ex);
         }
     }
 
@@ -119,7 +119,7 @@ public abstract class WebViewPageBase : Page
         }
         catch (Exception ex)
         {
-            AppLogger.Log($"WebViewPageBase OnLoaded:{AppId} Exception", ex.Message);
+            AppLogger.Log($"[WebViewPageBase] OnLoaded:{AppId} error: {ex.Message}", ex);
         }
     }
 

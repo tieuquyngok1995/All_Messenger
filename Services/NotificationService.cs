@@ -16,6 +16,9 @@ namespace All_in_One_Messenger.Services;
 
 public sealed class NotificationService
 {
+    // ── App IDs ──────────────────────────────────────────────────────────────
+    private const string AppIdZalo = "Zalo";
+
     // Setting keys (used in conjunction with SettingPage)
     public const string NotificationModeKey = "NotificationMode";
     public const string NotificationModeToast = "Toast";
@@ -83,7 +86,11 @@ public sealed class NotificationService
     public void SetWindowActive(bool active)
     {
         _isWindowActive = active;
-        if (active) ClearAllBadges();
+        if (active)
+        {
+            ClearAllBadges();
+            NotificationFilter.ClearAllStates();
+        }
     }
 
     public void ClearBadge(string appId)
@@ -147,15 +154,14 @@ public sealed class NotificationService
                 if (!string.IsNullOrWhiteSpace(body))
                     builder.AddText(body);
 
-                if (!string.IsNullOrWhiteSpace(icon) &&
-                    Uri.TryCreate(icon, UriKind.Absolute, out var iconUri))
+                if (appId != AppIdZalo && !string.IsNullOrWhiteSpace(icon) && Uri.TryCreate(icon, UriKind.Absolute, out var iconUri))
                     builder.SetAppLogoOverride(iconUri, AppNotificationImageCrop.Circle);
 
                 AppNotificationManager.Default.Show(builder.BuildNotification());
             }
             catch (Exception ex)
             {
-                AppLogger.Log($"NotificationService ShowToast Exception", ex.Message);
+                AppLogger.Log($"[NotificationService] ShowToast error: {ex.Message}", ex);
             }
         }
         if (_dispatcherQueue is not null)
@@ -243,7 +249,7 @@ public sealed class NotificationService
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.Log($"NotificationService UpdateTaskbarBadge Exception badge update failed", ex.Message);
+                    AppLogger.Log($"[NotificationService] UpdateTaskbarBadge error: {ex.Message}", ex);
                 }
             }
 
@@ -270,7 +276,7 @@ public sealed class NotificationService
                 }
                 catch (Exception ex)
                 {
-                    AppLogger.Log($"NotificationService UpdateTaskbarBadge Exception overlay icon failed", ex.Message);
+                    AppLogger.Log($"NotificationService UpdateTaskbarBadge error: {ex.Message}", ex);
                 }
             }
 
