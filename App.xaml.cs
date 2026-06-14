@@ -22,7 +22,7 @@ public partial class App : Application
         try { InitializeComponent(); }
         catch (Exception ex)
         {
-            AppLogger.Log("[App] Interface Initialization Error (InitializeComponent)", ex);
+            AppLogger.Log($"[App] InitializeComponent error: {ex.Message}", ex);
             throw;
         }
 
@@ -30,7 +30,7 @@ public partial class App : Application
 
         this.UnhandledException += (_, e) =>
         {
-            AppLogger.Log("[App] UnhandledException", e.Exception);
+            AppLogger.Log($"[App] UnhandledException error: {e.Message}", e.Exception);
             e.Handled = true;
         };
 
@@ -40,7 +40,7 @@ public partial class App : Application
         // Catch the missed task that was not awaited (unobserved async exception)
         TaskScheduler.UnobservedTaskException += (_, e) =>
         {
-            AppLogger.Log("[TaskScheduler] UnobservedTaskException", e.Exception);
+            AppLogger.Log($"[TaskScheduler] UnobservedTaskException", e.Exception);
             e.SetObserved();
         };
     }

@@ -6,22 +6,44 @@ using System.Threading.Tasks;
 
 namespace All_in_One_Messenger.Helper;
 
-public static class WebViewNotificationHelper
-{
+public static class WebViewNotificationHelper {
     /// <summary> 
     /// Inject script
     /// Call EnsureCoreWebView2Async after, BEFORE set the Source. 
     /// Block the window.Notification API and send messages to WinUI.
     /// </summary>
-    public static async Task InjectNotificationHookAsync(CoreWebView2 webView)
-    {
+    public static async Task InjectNotificationHookAsync(CoreWebView2 webView) {
         const string script = """
             (function () {
                 if (window.__allMessengerHooked) return;
                 window.__allMessengerHooked = true;
 
-                // ── Helpers ──────────────────────────────────────────────────────────────
+                // ════════════════════════════════════════════════════════════
+                //   App detection
+                // ════════════════════════════════════════════════════════════
+                const host = location.hostname;
+                const APP = {
+                    isFacebook: /messenger\.com|facebook\.com/.test(host),
+                    isZalo: /zalo\.me|chat\.zalo\.me/.test(host),
+                    isTeams: /teams\.microsoft\.com|teams\.live\.com/.test(host),
+                    isCustom: false,
+                };
 
+                if (!APP.isFacebook && !APP.isZalo && !APP.isTeams) {
+                    APP.isCustom = true;
+                }
+
+                // ════════════════════════════════════════════════════════════
+                //  CUSTOM SERVER CONFIG
+                // ════════════════════════════════════════════════════════════
+                const CUSTOM = {
+                    unreadSelector: "li.SidebarChannel.unread",
+                    sidebarSelector: "#SidebarContainer",
+                };
+
+                // ════════════════════════════════════════════════════════════
+                //  Helpers
+                // ════════════════════════════════════════════════════════════
                 function postMessage(payload) {
                     try {
                         window.chrome.webview.postMessage(JSON.stringify(payload));
@@ -31,116 +53,116 @@ public static class WebViewNotificationHelper
                 }
 
                 function postNotification(title, body, icon) {
-                    postMessage({
-                        type: "notification",
-                        title: title || "",
-                        body: body || "",
-                        icon: icon || "",
-                    });
+                    const content = buildNotificationContent(title, body);
+                    postMessage({ type: "notification", ...content, icon: icon || "", });
                 }
 
                 function postBadge(count) {
                     postMessage({ type: "badge", count });
                 }
 
-                // ── Hook 1: window.Notification constructor ──────────────────────────────
-                // Capture Messenger, Zalo, Mattermost (using new Notification() from page context).
-                const _OriginalNotification = window.Notification;
+                function buildNotificationContent(title, body) {
+                    if (title && body) return { title, body };
 
-                function HookedNotification(title, options = {}) {
-                    postNotification(title, options.body, options.icon);
+                    if (APP.isFacebook) {
+                        const raw = document.title.replace(/^\(\d+\)\s*/, "").trim();
+                        return {
+                            title: title || raw || "Facebook",
+                            body: body || "Bạn có tin nhắn mới",
+                        };
+                    }
 
-                    // Returns a mock object instead of calling the actual API.
-                    // WebView2 cannot display OS notifications directly → calling the actual API will
-                    const mock = Object.assign(Object.create(_OriginalNotification.prototype), {
-                        title: title || "",
-                        body: options.body || "",
-                        icon: options.icon || "",
-                        tag: options.tag || "",
-                        data: options.data ?? null,
-                        silent: options.silent ?? false,
-                        onclick: null,
-                        onclose: null,
-                        onerror: null,
-                        onshow: null,
-                        close() {
-                            if (typeof this.onclose === "function")
-                                this.onclose(new Event("close"));
-                        },
-                    });
+                    if (APP.isTeams) {
+                        const raw = document.title.replace(/^\(\d+\)\s*/, "").replace(/\s*[\|–]\s*Microsoft Teams.*/i, "").trim();
+                        return {
+                            title: title || raw || "Microsoft Teams",
+                            body: body || "Bạn có tin nhắn mới",
+                        };
+                    }
 
-                    // Inform the page that the notification has successfully "displayed"
-                    setTimeout(() => {
-                        if (typeof mock.onshow === "function") mock.onshow(new Event("show"));
-                    }, 0);
-
-                    return mock;
+                    return {
+                        title: title || document.title.replace(/^\(\d+\)\s*/, "").trim() || "Tin nhắn mới",
+                        body: body || "Bạn có tin nhắn mới",
+                    };
                 }
 
+                function postNotification(title, body, icon) {
+                    const content = buildNotificationContent(title, body);
+                    postMessage({
+                        type: "notification",
+                        title: content.title,
+                        body: content.body,
+                        icon: icon || "",
+                    });
+                }
+
+                // ════════════════════════════════════════════════════════════
+                //  Hook 1: Window notification hook
+                // ════════════════════════════════════════════════════════════
+                const _OriginalNotification = window.Notification;
+                function HookedNotification(title, options = {}) {
+                    postNotification(title, options.body, options.icon);
+                    if (APP.isZalo) {
+
+                        attachZaloObserver();
+                    }
+                    try { const n = new _OriginalNotification(title, options); n.close(); return n; }
+                    catch { return { title, body: options.body, icon: options.icon, close() { } }; }
+                }
                 HookedNotification.prototype = _OriginalNotification.prototype;
-                Object.defineProperty(HookedNotification, "permission", {
-                    get: () => "granted",
-                });
+                Object.defineProperty(HookedNotification, "permission", { get: () => "granted" });
                 HookedNotification.requestPermission = () => Promise.resolve("granted");
                 HookedNotification.maxActions = _OriginalNotification.maxActions || 2;
                 window.Notification = HookedNotification;
 
-                // ── Hook 2: ServiceWorkerRegistration.showNotification ───────────────────
-                // Capture notifications from Teams and apps calling showNotification() from the page/worker context.
-                // (Service Worker runs in its own thread – cannot be hooked directly,
-                // but many apps still call it via the registration object in the page context.)
+                // ════════════════════════════════════════════════════════════
+                //  Hook 2: Service worker hook
+                // ════════════════════════════════════════════════════════════
                 const _origShow = ServiceWorkerRegistration?.prototype?.showNotification;
                 if (_origShow) {
-                    ServiceWorkerRegistration.prototype.showNotification = function (
-                        title,
-                        options = {},
-                    ) {
+                    ServiceWorkerRegistration.prototype.showNotification = function (title, options = {}) {
                         postNotification(title, options.body, options.icon);
                         return _origShow.call(this, title, options);
                     };
                 }
 
-                // ── Hook 3: Track the badge number in document.title ────────────────────────
-                // Fallback for Teams (usually not using new Notification() when the app is open):
-                // title changes to "(N) Microsoft Teams", "(N) Messenger", "(N) Zalo".
-                // Only fire when the count CHANGES from the last count; send toast when the count INCREASES.
+                // ════════════════════════════════════════════════════════════
+                //  Hook 3: Badge counting from document.title
+                // ════════════════════════════════════════════════════════════
                 let _prevCount = -1;
-
+                let _debounceTimer = null;
                 function getUnreadCount() {
-                    const titleCount = parseInt(
-                        document.title.match(/^\((\d+)\)/)?.[1] ?? "0",
-                        10,
-                    );
+                    const match = document.title.match(/^\((\d+)\)/);
+                    const titleCount = match ? parseInt(match[1], 10) : 0;
 
-                    // Mattermost channel unread
-                    // <li class="SidebarChannel unread">
-                    const channelCount = document.querySelectorAll(
-                        "li.SidebarChannel.unread",
-                    ).length;
+                    const domCount = (APP.isCustom && CUSTOM.unreadSelector)
+                        ? document.querySelectorAll(CUSTOM.unreadSelector).length
+                        : 0;
 
-                    return titleCount + channelCount;
+                    if (!match) return domCount;
+                    return titleCount + domCount;
                 }
 
                 function updateBadge() {
-                    const count = getUnreadCount();
+                    clearTimeout(_debounceTimer);
+                    _debounceTimer = setTimeout(() => {
+                        const count = getUnreadCount();
+                        if (count === _prevCount) return;
 
-                    if (count === _prevCount) return;
+                        const isFirstRun = _prevCount === -1;
+                        const increased = !isFirstRun && count > _prevCount;
 
-                    // First run: sync badge without sending toast
-                    const isFirstRun = _prevCount === -1;
-                    const increased = !isFirstRun && count > _prevCount;
-
-                    _prevCount = count;
-                    postBadge(count);
-
-                    if (increased) postNotification("New messages", "", "");
+                        _prevCount = count;
+                        postBadge(count);
+                        if (increased) postNotification("", "", "");
+                    }, 300);
                 }
-
-                // ── Gắn observer lên <title> ──────────────────────────────────────────────
 
                 function attachTitleObserver() {
                     const titleEl = document.querySelector("title");
-                    if (!titleEl) return false;
+                    if (!titleEl) {
+                        return false;
+                    }
                     new MutationObserver(updateBadge).observe(titleEl, {
                         childList: true,
                         characterData: true,
@@ -160,25 +182,17 @@ public static class WebViewNotificationHelper
                         childList: true,
                         subtree: true,
                     });
-
                     // DOMContentLoaded as the final fallback
-                    document.addEventListener(
-                        "DOMContentLoaded",
-                        () => {
-                            if (attachTitleObserver()) rootObserver.disconnect();
-                        },
-                        { once: true },
-                    );
+                    document.addEventListener("DOMContentLoaded", () => {
+                        if (attachTitleObserver()) rootObserver.disconnect();
+                    }, { once: true });
                 }
 
-                // ── Attach observer to Mattermost sidebar ──────────────────────────────────
-
-                // Listen for unread classes on Sidebar Channels when the DOM is ready.
-                document.addEventListener(
-                    "DOMContentLoaded",
-                    () => {
+                // ── Hook 4: Sidebar DOM observer (Custom server only) ─────────────────────
+                if (APP.isCustom && CUSTOM.sidebarSelector) {
+                    document.addEventListener("DOMContentLoaded", () => {
                         updateBadge();
-                        const sidebar = document.querySelector("#SidebarContainer");
+                        const sidebar = document.querySelector(CUSTOM.sidebarSelector);
                         if (sidebar) {
                             new MutationObserver(updateBadge).observe(sidebar, {
                                 subtree: true,
@@ -187,11 +201,10 @@ public static class WebViewNotificationHelper
                                 attributeFilter: ["class"],
                             });
                         }
-                    },
-                    { once: true },
-                );
-            })();             
-            """;
+                    }, { once: true });
+                }
+            })();
+        """;
 
         await webView.AddScriptToExecuteOnDocumentCreatedAsync(script);
     }
@@ -202,8 +215,7 @@ public static class WebViewNotificationHelper
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="args"></param>
-    public static void AllowNotificationPermission(CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args)
-    {
+    public static void AllowNotificationPermission(CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args) {
         if (args.PermissionKind == CoreWebView2PermissionKind.Notifications)
             args.State = CoreWebView2PermissionState.Allow;
     }
@@ -214,10 +226,8 @@ public static class WebViewNotificationHelper
     /// Automatically forward to NotificationService if the message is in the correct format.
     /// </summary> 
     /// <param name="appId">For example: "Teams", "Messenger", "Zalo"</param>
-    public static void HandleWebMessage(string appId, CoreWebView2WebMessageReceivedEventArgs e)
-    {
-        try
-        {
+    public static void HandleWebMessage(string appId, CoreWebView2WebMessageReceivedEventArgs e) {
+        try {
             string raw = e.TryGetWebMessageAsString();
 
             using var doc = JsonDocument.Parse(raw);
@@ -226,24 +236,26 @@ public static class WebViewNotificationHelper
             if (!root.TryGetProperty("type", out var typeProp)) return;
             string msgType = typeProp.GetString() ?? string.Empty;
 
-            if (msgType == "badge")
-            {
-                int count = root.TryGetProperty("count", out var cp) ? cp.GetInt32() : 0;
+            if (msgType == "badge") {
+                int count = root.TryGetProperty("count", out var cp) ?cp.GetInt32(): 0;
                 NotificationService.Instance.SetBadgeDirect(appId, count);
                 return;
             }
 
             if (msgType != "notification") return;
 
-            string title = root.TryGetProperty("title", out var t) ? t.GetString() ?? string.Empty : string.Empty;
-            string body = root.TryGetProperty("body", out var b) ? b.GetString() ?? string.Empty : string.Empty;
-            string icon = root.TryGetProperty("icon", out var i) ? i.GetString() ?? string.Empty : string.Empty;
+            string title = root.TryGetProperty("title", out var t) ?t.GetString() ?? string.Empty : string.Empty;
+            string body = root.TryGetProperty("body", out var b) ?b.GetString() ?? string.Empty : string.Empty;
+            string icon = root.TryGetProperty("icon", out var i) ?i.GetString() ?? string.Empty : string.Empty;
+
+            if (!NotificationFilter.ShouldProcess(appId, title, body, icon))
+                return;
 
             NotificationService.Instance.HandleWebNotification(appId, title, body, icon);
         }
         catch (Exception ex)
         {
-            AppLogger.Log($"WebViewNotificationHelper HandleWebMessage:{appId} Exception", ex.Message);
+            AppLogger.Log($"[WebViewNotificationHelper] HandleWebMessage:{appId} error:{ex.Message}", ex);
         }
     }
 
@@ -253,15 +265,14 @@ public static class WebViewNotificationHelper
     /// Each app has different URL logic — passed in via predicate.
     /// </summary>
     public static void AttachSessionDetector(string appId, CoreWebView2 webView, Func<string, bool> isLoggedInUrl, bool resetOnFalse = true)
-    {
-        webView.NavigationCompleted += (sender, args) =>
-        {
+{
+    webView.NavigationCompleted += (sender, args) => {
             bool loggedIn = isLoggedInUrl(sender.Source);
 
-            // reset=false: only set true when login is detected, do not reset when 
-            // navigate to a different domain (e.g., facebook.com link preview in Messenger)
-            if (loggedIn || resetOnFalse)
-                NotificationService.Instance.SetSession(appId, loggedIn);
-        };
-    }
+        // reset=false: only set true when login is detected, do not reset when 
+        // navigate to a different domain (e.g., facebook.com link preview in Messenger)
+        if (loggedIn || resetOnFalse)
+            NotificationService.Instance.SetSession(appId, loggedIn);
+    };
+}
 }

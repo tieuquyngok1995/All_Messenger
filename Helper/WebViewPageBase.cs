@@ -46,7 +46,7 @@ public abstract class WebViewPageBase : Page
 
             await WebViewNotificationHelper.InjectNotificationHookAsync(core);
 
-            // Hook cho page-specific setup (session detector, v.v.)
+            // Hook to page-specific setup (session detector, v.v.)
             OnCoreWebView2Ready(core);
 
             // Apply the app theme to the WebView immediately after initialization

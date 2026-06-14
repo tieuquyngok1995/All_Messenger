@@ -81,6 +81,11 @@ public sealed partial class SettingPage : Page
         Loaded += SettingPage_Loaded;
     }
 
+    /// <summary>
+    /// Handling page load settings.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     private void SettingPage_Loaded(object sender, RoutedEventArgs e)
     {
         _isLoading = true;
@@ -96,6 +101,11 @@ public sealed partial class SettingPage : Page
             CustomServers.Add(server);
     }
 
+    /// <summary>
+    /// Event: change mode notification.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     private void NotificationModeGroup_SelectionChanged(object sender, SelectionChangedEventArgs e)
     {
         if (_isLoading) return;
@@ -106,6 +116,11 @@ public sealed partial class SettingPage : Page
             SaveNotificationMode(NotificationService.NotificationModeToast);
     }
 
+    /// <summary>
+    /// Event: Add custom server
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     private async void AddServer_Click(object sender, RoutedEventArgs e)
     {
         var result = await ShowServerDialogAsync("Thêm chat server", "Thêm");
@@ -124,6 +139,11 @@ public sealed partial class SettingPage : Page
         App.MainWindow?.AddCustomServerTab(info);
     }
 
+    /// <summary>
+    /// Event: Edit custom server
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     private async void EditServer_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not string id) return;
@@ -137,7 +157,7 @@ public sealed partial class SettingPage : Page
 
         var (name, url, glyph) = result.Value;
 
-        // // Update model — INPC automatically refreshes ListView
+        // Update model — INPC automatically refreshes ListView
         server.Name = name;
         server.Url = url;
         server.IconGlyph = glyph;
@@ -156,6 +176,11 @@ public sealed partial class SettingPage : Page
         App.MainWindow?.UpdateCustomServerTab(id, name, glyph, url);
     }
 
+    /// <summary>
+    /// Event: Delete custom server
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
     private void DeleteServer_Click(object sender, RoutedEventArgs e)
     {
         if (sender is not Button btn || btn.Tag is not string id) return;
@@ -173,6 +198,10 @@ public sealed partial class SettingPage : Page
         App.MainWindow?.RemoveCustomServerTab(id);
     }
 
+    /// <summary>
+    /// Event: Displaying the server dialog
+    /// </summary>
+    /// <returns></returns>
     private Task<(string Name, string Url, string IconGlyph)?> ShowServerDialogAsync(
         string title, string primaryButton, string initName = "", string initUrl = "", string initGlyph = "")
     {
