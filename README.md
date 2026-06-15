@@ -20,15 +20,15 @@
 
 ## Công nghệ sử dụng
 
-| Thành phần | Chi tiết |
-|---|---|
-| UI Framework | WinUI 3 — Windows App SDK 1.8 |
-| Web Engine | Microsoft WebView2 1.0.3179+ |
-| Runtime | .NET 8, x64 |
-| Packaging | Unpackaged (không cần MSIX) |
+| Thành phần   | Chi tiết                                  |
+| ------------ | ----------------------------------------- |
+| UI Framework | WinUI 3 — Windows App SDK 1.8             |
+| Web Engine   | Microsoft WebView2 1.0.3179+              |
+| Runtime      | .NET 8, x64                               |
+| Packaging    | Unpackaged (không cần MSIX)               |
 | Notification | Microsoft.Toolkit.Uwp.Notifications 7.1.3 |
-| Installer | Inno Setup |
-| Ngôn ngữ | C# |
+| Installer    | Inno Setup                                |
+| Ngôn ngữ     | C#                                        |
 
 ---
 
@@ -58,7 +58,7 @@ All_Messenger/
 │
 ├── Assets/                         # Icon app, logo, icon Messenger/Zalo/Teams (light & dark)
 └── installer/
-    └── AllMessenger_Setup.iss      # Script Inno Setup đóng gói cài đặt
+    └── AllinOneMessenger_Setup.iss      # Script Inno Setup đóng gói cài đặt
 ```
 
 ---
@@ -83,7 +83,7 @@ dotnet publish -c Release -r win-x64
 
 Kết quả publish nằm tại `bin\Release\net8.0-windows10.0.19041.0\win-x64\publish\`.
 
-Để đóng gói installer, mở `installer\AllMessenger_Setup.iss` bằng **Inno Setup** và chọn **Build**.
+Để đóng gói installer, mở `installer\AllinOneMessenger_Setup.iss` bằng **Inno Setup** và chọn **Build**.
 
 ---
 
@@ -98,7 +98,8 @@ Kết quả publish nằm tại `bin\Release\net8.0-windows10.0.19041.0\win-x64\
 
 ## Lưu trữ dữ liệu
 
-| Dữ liệu | Đường dẫn |
-|---|---|
-| Cài đặt ứng dụng | `%LOCALAPPDATA%\AllinOneMessenger\settings.json` |
+| Dữ liệu                         | Đường dẫn                                            |
+| ------------------------------- | ---------------------------------------------------- |
+| Cài đặt ứng dụng                | `%LOCALAPPDATA%\AllinOneMessenger\settings.json`     |
+| Ghi lỗi                         | `%LOCALAPPDATA%\AllinOneMessenger\error.log`         |
 | Profile WebView (cookie, cache) | `%LOCALAPPDATA%\AllinOneMessenger\Profiles\<AppId>\` |
