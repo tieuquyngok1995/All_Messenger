@@ -103,6 +103,7 @@ public sealed partial class MainWindow : Window
         // InitializeWindow
         var hwnd = WindowNative.GetWindowHandle(this);
         _appWindow = AppWindow.GetFromWindowId(Win32Interop.GetWindowIdFromWindow(hwnd));
+        _appWindow.SetIcon("Assets\\icon.ico");
         _appWindow.TitleBar.ExtendsContentIntoTitleBar = true;
         _appWindow.Resize(new Windows.Graphics.SizeInt32(1100, 720));
         SystemBackdrop = new MicaBackdrop();

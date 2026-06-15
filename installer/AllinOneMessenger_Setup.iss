@@ -40,7 +40,7 @@ SetupIconFile={#AppIcon}
 
 ; Output
 OutputDir=output
-OutputBaseFilename=AllMessenger_Setup_{#AppVersion}
+OutputBaseFilename=AllinOneMessenger_Setup_{#AppVersion}
 
 ; Nén tốt nhất
 Compression=lzma2/ultra64
