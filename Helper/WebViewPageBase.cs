@@ -36,7 +36,7 @@ public abstract class WebViewPageBase : Page
 
             var core = WebView.CoreWebView2;
 
-            ConfigureWebView(core);
+            ConfigureWebView(core, WebView);
 
             core.PermissionRequested += (s, a) =>
                 WebViewNotificationHelper.AllowNotificationPermission(s, a);
@@ -72,19 +72,67 @@ public abstract class WebViewPageBase : Page
     /// Configure for WebView.
     /// </summary>
     /// <param name="core"></param>
-    private static void ConfigureWebView(CoreWebView2 core)
+    private static void ConfigureWebView(CoreWebView2 core, WebView2 webViewControl)
     {
-        // Open the link in the chat using the default Windows browser
-        core.NewWindowRequested += (s, e) =>
+        core.NewWindowRequested += async (s, e) =>
         {
             e.Handled = true;
-            if (!string.IsNullOrEmpty(e.Uri))
+
+            if (!string.IsNullOrEmpty(e.Uri) && e.Uri != "about:blank")
             {
+                // There's a real URI → open an external browser
                 Process.Start(new ProcessStartInfo
                 {
                     FileName = e.Uri,
                     UseShellExecute = true
                 });
+                return;
+            }
+
+            // Blank popup → create a hidden WebView2 to catch the redirect, DO NOT use the current core.
+            var deferral = e.GetDeferral();
+            try
+            {
+                var hiddenWebView = new WebView2
+                {
+                    Visibility = Visibility.Collapsed
+                };
+
+                if (webViewControl.Parent is Panel parent)
+                    parent.Children.Add(hiddenWebView);
+
+                await hiddenWebView.EnsureCoreWebView2Async(
+                    webViewControl.CoreWebView2.Environment);
+
+                e.NewWindow = hiddenWebView.CoreWebView2;
+                deferral.Complete();
+
+                // Capture the actual URL after the redirect
+                hiddenWebView.CoreWebView2.NavigationStarting += (ns, ne) =>
+                {
+                    if (ne.Uri.StartsWith("about:") ||
+                        ne.Uri.StartsWith("data:") ||
+                        ne.Uri.StartsWith("blob:"))
+                        return;
+
+                    ne.Cancel = true;
+
+                    // Open the actual URL in an external browser
+                    Process.Start(new ProcessStartInfo
+                    {
+                        FileName = ne.Uri,
+                        UseShellExecute = true
+                    });
+
+                    // Clean up hidden webview
+                    hiddenWebView.Close();
+                    if (webViewControl.Parent is Panel p)
+                        p.Children.Remove(hiddenWebView);
+                };
+            }
+            catch
+            {
+                deferral.Complete();
             }
         };
 
