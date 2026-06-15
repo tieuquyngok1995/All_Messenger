@@ -184,10 +184,16 @@ public abstract class WebViewPageBase : Page
     /// </summary>
     private void ApplyColorSchemeFromCurrentTheme()
     {
-        if (WebView.CoreWebView2 is null) return;
-        WebView.CoreWebView2.Profile.PreferredColorScheme = ActualTheme == ElementTheme.Dark
-            ? CoreWebView2PreferredColorScheme.Dark
-            : CoreWebView2PreferredColorScheme.Light;
+        if (WebView.CoreWebView2 is null)
+            return;
+
+        if (App.MainWindow?.Content is not FrameworkElement root)
+            return;
+
+        WebView.CoreWebView2.Profile.PreferredColorScheme =
+            root.ActualTheme == ElementTheme.Dark
+                ? CoreWebView2PreferredColorScheme.Dark
+                : CoreWebView2PreferredColorScheme.Light;
     }
 
     private void OnActualThemeChanged(FrameworkElement sender, object args)
