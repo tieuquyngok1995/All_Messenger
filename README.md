@@ -101,4 +101,5 @@ Kết quả publish nằm tại `bin\Release\net8.0-windows10.0.19041.0\win-x64\
 | Dữ liệu | Đường dẫn |
 |---|---|
 | Cài đặt ứng dụng | `%LOCALAPPDATA%\AllMessenger\settings.json` |
+| Ghi lỗi | `%LOCALAPPDATA%\AllMessenger\settings.json` |
 | Profile WebView (cookie, cache) | `%LOCALAPPDATA%\AllinOneMessenger\Profiles\<AppId>\` |
