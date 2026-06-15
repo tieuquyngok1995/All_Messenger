@@ -7,9 +7,9 @@ using System.Threading.Tasks;
 namespace All_in_One_Messenger.Helper;
 
 public static class WebViewNotificationHelper {
-    /// <summary> 
+    /// <summary>
     /// Inject script
-    /// Call EnsureCoreWebView2Async after, BEFORE set the Source. 
+    /// Call EnsureCoreWebView2Async after, BEFORE set the Source.
     /// Block the window.Notification API and send messages to WinUI.
     /// </summary>
     public static async Task InjectNotificationHookAsync(CoreWebView2 webView) {
@@ -32,14 +32,6 @@ public static class WebViewNotificationHelper {
                 if (!APP.isFacebook && !APP.isZalo && !APP.isTeams) {
                     APP.isCustom = true;
                 }
-
-                // ════════════════════════════════════════════════════════════
-                //  CUSTOM SERVER CONFIG
-                // ════════════════════════════════════════════════════════════
-                const CUSTOM = {
-                    unreadSelector: "li.SidebarChannel.unread",
-                    sidebarSelector: "#SidebarContainer",
-                };
 
                 // ════════════════════════════════════════════════════════════
                 //  Helpers
@@ -101,11 +93,9 @@ public static class WebViewNotificationHelper {
                 // ════════════════════════════════════════════════════════════
                 const _OriginalNotification = window.Notification;
                 function HookedNotification(title, options = {}) {
+                    console.log("Hook 1", title, options.body, options.icon);
                     postNotification(title, options.body, options.icon);
-                    if (APP.isZalo) {
-
-                        attachZaloObserver();
-                    }
+                    if (APP.isCustom) {updateBadge();}
                     try { const n = new _OriginalNotification(title, options); n.close(); return n; }
                     catch { return { title, body: options.body, icon: options.icon, close() { } }; }
                 }
@@ -118,9 +108,12 @@ public static class WebViewNotificationHelper {
                 // ════════════════════════════════════════════════════════════
                 //  Hook 2: Service worker hook
                 // ════════════════════════════════════════════════════════════
-                const _origShow = ServiceWorkerRegistration?.prototype?.showNotification;
+                const _origShow =  typeof ServiceWorkerRegistration !== "undefined"
+                    ? ServiceWorkerRegistration.prototype.showNotification
+                    : null;
                 if (_origShow) {
                     ServiceWorkerRegistration.prototype.showNotification = function (title, options = {}) {
+                        console.log("Hook 2", title, options.body, options.icon);
                         postNotification(title, options.body, options.icon);
                         return _origShow.call(this, title, options);
                     };
@@ -135,8 +128,8 @@ public static class WebViewNotificationHelper {
                     const match = document.title.match(/^\((\d+)\)/);
                     const titleCount = match ? parseInt(match[1], 10) : 0;
 
-                    const domCount = (APP.isCustom && CUSTOM.unreadSelector)
-                        ? document.querySelectorAll(CUSTOM.unreadSelector).length
+                    const domCount = (APP.isCustom)
+                        ? document.querySelectorAll("li.SidebarChannel.unread").length
                         : 0;
 
                     if (!match) return domCount;
@@ -187,22 +180,6 @@ public static class WebViewNotificationHelper {
                         if (attachTitleObserver()) rootObserver.disconnect();
                     }, { once: true });
                 }
-
-                // ── Hook 4: Sidebar DOM observer (Custom server only) ─────────────────────
-                if (APP.isCustom && CUSTOM.sidebarSelector) {
-                    document.addEventListener("DOMContentLoaded", () => {
-                        updateBadge();
-                        const sidebar = document.querySelector(CUSTOM.sidebarSelector);
-                        if (sidebar) {
-                            new MutationObserver(updateBadge).observe(sidebar, {
-                                subtree: true,
-                                childList: true,
-                                attributes: true,
-                                attributeFilter: ["class"],
-                            });
-                        }
-                    }, { once: true });
-                }
             })();
         """;
 
@@ -224,7 +201,7 @@ public static class WebViewNotificationHelper {
     /// Handling messages from WebView
     /// Call in the WebMessageReceived handler of each page.
     /// Automatically forward to NotificationService if the message is in the correct format.
-    /// </summary> 
+    /// </summary>
     /// <param name="appId">For example: "Teams", "Messenger", "Zalo"</param>
     public static void HandleWebMessage(string appId, CoreWebView2WebMessageReceivedEventArgs e) {
         try {
@@ -269,7 +246,7 @@ public static class WebViewNotificationHelper {
     webView.NavigationCompleted += (sender, args) => {
             bool loggedIn = isLoggedInUrl(sender.Source);
 
-        // reset=false: only set true when login is detected, do not reset when 
+        // reset=false: only set true when login is detected, do not reset when
         // navigate to a different domain (e.g., facebook.com link preview in Messenger)
         if (loggedIn || resetOnFalse)
             NotificationService.Instance.SetSession(appId, loggedIn);
