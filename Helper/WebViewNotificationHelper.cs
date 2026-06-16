@@ -46,7 +46,7 @@ public static class WebViewNotificationHelper {
 
                 function postNotification(title, body, icon) {
                     const content = buildNotificationContent(title, body);
-                    postMessage({ type: "notification", ...content, icon: icon || "", });
+                    postMessage({ type: "notification", ...content, icon: icon || "" });
                 }
 
                 function postBadge(count) {
@@ -65,7 +65,10 @@ public static class WebViewNotificationHelper {
                     }
 
                     if (APP.isTeams) {
-                        const raw = document.title.replace(/^\(\d+\)\s*/, "").replace(/\s*[\|–]\s*Microsoft Teams.*/i, "").trim();
+                        const raw = document.title
+                            .replace(/^\(\d+\)\s*/, "")
+                            .replace(/\s*[\|–]\s*Microsoft Teams.*/i, "")
+                            .trim();
                         return {
                             title: title || raw || "Microsoft Teams",
                             body: body || "Bạn có tin nhắn mới",
@@ -93,11 +96,14 @@ public static class WebViewNotificationHelper {
                 // ════════════════════════════════════════════════════════════
                 const _OriginalNotification = window.Notification;
                 function HookedNotification(title, options = {}) {
-                    console.log("Hook 1", title, options.body, options.icon);
                     postNotification(title, options.body, options.icon);
-                    if (APP.isCustom) {updateBadge();}
-                    try { const n = new _OriginalNotification(title, options); n.close(); return n; }
-                    catch { return { title, body: options.body, icon: options.icon, close() { } }; }
+                    try {
+                        const n = new _OriginalNotification(title, options);
+                        n.close();
+                        return n;
+                    } catch {
+                        return { title, body: options.body, icon: options.icon, close() { } };
+                    }
                 }
                 HookedNotification.prototype = _OriginalNotification.prototype;
                 Object.defineProperty(HookedNotification, "permission", { get: () => "granted" });
@@ -108,12 +114,9 @@ public static class WebViewNotificationHelper {
                 // ════════════════════════════════════════════════════════════
                 //  Hook 2: Service worker hook
                 // ════════════════════════════════════════════════════════════
-                const _origShow =  typeof ServiceWorkerRegistration !== "undefined"
-                    ? ServiceWorkerRegistration.prototype.showNotification
-                    : null;
+                const _origShow = typeof ServiceWorkerRegistration !== "undefined" ? ServiceWorkerRegistration.prototype.showNotification : null;
                 if (_origShow) {
                     ServiceWorkerRegistration.prototype.showNotification = function (title, options = {}) {
-                        console.log("Hook 2", title, options.body, options.icon);
                         postNotification(title, options.body, options.icon);
                         return _origShow.call(this, title, options);
                     };
@@ -128,9 +131,11 @@ public static class WebViewNotificationHelper {
                     const match = document.title.match(/^\((\d+)\)/);
                     const titleCount = match ? parseInt(match[1], 10) : 0;
 
-                    const domCount = (APP.isCustom)
-                        ? document.querySelectorAll("li.SidebarChannel.unread").length
-                        : 0;
+                    let domCount = 0;
+                    if (APP.isCustom) {
+                        const group = document.querySelector('.SidebarChannelGroup[data-rbd-draggable-id^="channels_"]');
+                        domCount = group.querySelectorAll('li.SidebarChannel.unread').length;
+                    }
 
                     if (!match) return domCount;
                     return titleCount + domCount;
@@ -176,11 +181,27 @@ public static class WebViewNotificationHelper {
                         subtree: true,
                     });
                     // DOMContentLoaded as the final fallback
-                    document.addEventListener("DOMContentLoaded", () => {
-                        if (attachTitleObserver()) rootObserver.disconnect();
-                    }, { once: true });
+                    document.addEventListener(
+                        "DOMContentLoaded",
+                        () => {
+                            if (attachTitleObserver()) rootObserver.disconnect();
+                        },
+                        { once: true },
+                    );
                 }
+
+                // Select the area to listen to and capture events when the channel unreads.
+                document.addEventListener(
+                    "DOMContentLoaded",
+                    function () {
+                        updateBadge();
+                        const sidebar = document.querySelector(".SidebarChannelGroup");
+                        if (sidebar) new MutationObserver(updateBadge).observe(sidebar, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+                    },
+                    { once: true },
+                );
             })();
+
         """;
 
         await webView.AddScriptToExecuteOnDocumentCreatedAsync(script);
