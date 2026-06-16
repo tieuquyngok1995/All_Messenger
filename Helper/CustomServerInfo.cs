@@ -17,6 +17,7 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     private string _name = string.Empty;
     private string _url = string.Empty;
     private string _iconGlyph = "\uE774"; // Globe
+    private bool _enabled = true;
     public int _order = 0;
 
     /// <summary>
@@ -53,6 +54,12 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     {
         get => _iconGlyph;
         set { if (_iconGlyph != value) { _iconGlyph = value; Notify(); } }
+    }
+
+    public bool Enable
+    {
+        get => _enabled;
+        set { if (_enabled != value) { _enabled = value; Notify(); } }
     }
 
     /// <summary>
