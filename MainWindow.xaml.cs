@@ -43,19 +43,7 @@ public sealed partial class MainWindow : Window
     private const string TabMessenger = "MessengerPage";
     private const string TabSettings = "SettingPage";
 
-    // ── App IDs ──────────────────────────────────────────────────────────────
-    private const string AppIdZalo = "Zalo";
-    private const string AppIdTeams = "Teams";
-    private const string AppIdMessenger = "Messenger";
-
     // ── Assets ───────────────────────────────────────────────────────────────
-    private const string AssetMessengerLight = "ms-appx:///Assets/messenger_light.png";
-    private const string AssetMessengerDark = "ms-appx:///Assets/messenger_dark.png";
-    private const string AssetZaloLight = "ms-appx:///Assets/zalo_light.png";
-    private const string AssetZaloDark = "ms-appx:///Assets/zalo_dark.png";
-    private const string AssetTeamsLight = "ms-appx:///Assets/teams_light.png";
-    private const string AssetTeamsDark = "ms-appx:///Assets/teams_dark.png";
-
     private readonly BitmapImage _messengerLight;
     private readonly BitmapImage _messengerDark;
     private readonly BitmapImage _zaloLight;
@@ -74,19 +62,19 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         // InitializeAssets
-        _messengerLight = new(new Uri(AssetMessengerLight));
-        _messengerDark = new(new Uri(AssetMessengerDark));
-        _zaloLight = new(new Uri(AssetZaloLight));
-        _zaloDark = new(new Uri(AssetZaloDark));
-        _teamsLight = new(new Uri(AssetTeamsLight));
-        _teamsDark = new(new Uri(AssetTeamsDark));
+        _messengerLight = new(new Uri(CONST.AssetMessengerLight));
+        _messengerDark = new(new Uri(CONST.AssetMessengerDark));
+        _zaloLight = new(new Uri(CONST.AssetZaloLight));
+        _zaloDark = new(new Uri(CONST.AssetZaloDark));
+        _teamsLight = new(new Uri(CONST.AssetTeamsLight));
+        _teamsDark = new(new Uri(CONST.AssetTeamsDark));
 
         // InitializeTabs
         _tabs = new()
         {
-            [TabTeams] = (TeamsPage, AppIdTeams),
-            [TabMessenger] = (MessengerPage, AppIdMessenger),
-            [TabZalo] = (ZaloPage, AppIdZalo),
+            [TabZalo] = (ZaloPage, CONST.AppIdZalo),
+            [TabTeams] = (TeamsPage, CONST.AppIdTeams),
+            [TabMessenger] = (MessengerPage, CONST.AppIdMessenger),
             [TabSettings] = (SettingPage, string.Empty),
         };
 
@@ -97,7 +85,7 @@ public sealed partial class MainWindow : Window
 
         WebViewProfileHelper.CleanupUnusedProfiles(
             servers.Select(s => s.Id),
-            exclude: [AppIdTeams, AppIdMessenger, AppIdZalo]
+            exclude: [CONST.AppIdTeams, CONST.AppIdMessenger, CONST.AppIdZalo]
         );
 
         // InitializeWindow
@@ -141,9 +129,9 @@ public sealed partial class MainWindow : Window
         var deadline = DateTime.UtcNow.AddSeconds(20);
         while (DateTime.UtcNow < deadline)
         {
-            var (_, messenger) = GetWebViewInfo(AppIdMessenger);
-            var (_, teams) = GetWebViewInfo(AppIdTeams);
-            var (_, zalo) = GetWebViewInfo(AppIdZalo);
+            var (_, messenger) = GetWebViewInfo(CONST.AppIdMessenger);
+            var (_, teams) = GetWebViewInfo(CONST.AppIdTeams);
+            var (_, zalo) = GetWebViewInfo(CONST.AppIdZalo);
             if (messenger && teams && zalo) break;
             await Task.Delay(100);
         }
@@ -204,9 +192,9 @@ public sealed partial class MainWindow : Window
     /// <returns></returns>
     private (WebView2? WebView, bool IsReady) GetWebViewInfo(string appId) => appId switch
     {
-        AppIdZalo => (ZaloPage.WebView, ZaloPage.IsReady),
-        AppIdTeams => (TeamsPage.WebView, TeamsPage.IsReady),
-        AppIdMessenger => (MessengerPage.WebView, MessengerPage.IsReady),
+        CONST.AppIdZalo => (ZaloPage.WebView, ZaloPage.IsReady),
+        CONST.AppIdTeams => (TeamsPage.WebView, TeamsPage.IsReady),
+        CONST.AppIdMessenger => (MessengerPage.WebView, MessengerPage.IsReady),
         _ => _customPages.TryGetValue(appId, out var p) ? (p.WebView, p.IsReady) : (null, false)
     };
     #endregion

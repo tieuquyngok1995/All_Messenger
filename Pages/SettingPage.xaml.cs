@@ -36,8 +36,8 @@ public sealed partial class SettingPage : Page
         ("Điện thoại",      "\uE717"),   // Phone
         ("Video call",      "\uE714"),   // Video camera
         ("Tai nghe",        "\uE95B"),   // Headset — Discord / voice
-        ("Email",           "\uE8A0"),   // Mail
-        ("Gửi",             "\uE8C8"),   // Send
+        ("Apps",            "\uE71D"),   // Apps
+        ("Group",           "\uEC26"),   // Send
         ("Sách",            "\uE736"),   // ReadingMode
         ("OEM",             "\uE74C"),   // OEM
         // ── Cộng đồng ─────────────────────────────────
@@ -46,14 +46,14 @@ public sealed partial class SettingPage : Page
         ("Thích",           "\uE899"),   // Like / thumbs up
         ("Yêu thích",       "\uE734"),   // Heart favorite
         ("Ngôi sao",        "\uE735"),   // Star (solid)
-        ("Audio",           "\uE8D6"),   // Audio
+        ("Đồng hồ",         "\uF0B4"),   // Audio
         ("Ethernet",        "\uE839"),   // Ethernet
         // ── Giải trí ──────────────────────────────────
         ("Trò chơi",        "\uE7FC"),   // Game controller
         ("Camera",          "\uE722"),   // Camera
         ("Âm nhạc",         "\uE8D6"),   // Music note — music bot servers
         ("Đám mây",         "\uE753"),   // Cloud
-        ("Thông báo",       "\uE7A7"),   // Bell
+        ("Cay bút",         "\uEF15"),   // Bell
         ("Con rùa",         "\uEA79"),   // SlowMotionOn
         ("Robot",           "\uE99A"),   // Robot
         // ── Công nghệ ─────────────────────────────────
@@ -65,8 +65,8 @@ public sealed partial class SettingPage : Page
         ("Cloud Search",    "\uEDE4"),   // CloudSearch
         ("Xe ô tô",         "\uEC47"),   // MobDrivingMode
         // ── Tiện ích ──────────────────────────────────
-        ("Ghim",            "\uE718"),   // Pin
-        ("Liên kết",        "\uE71B"),   // Link
+        ("Trái tim",        "\uE95E"),   // Health
+        ("Mặt cười",        "\uEB68"),   // Link
         ("Color",           "\uE790"),   // Color
         ("Bảo mật",         "\uE72E"),   // Shield / security
         ("Lịch",            "\uE787"),   // Calendar — event servers
@@ -96,8 +96,31 @@ public sealed partial class SettingPage : Page
             RadioToast.IsChecked = true;
         _isLoading = false;
 
+        ElementTheme theme = ((FrameworkElement)Content).ActualTheme;
+
+        var servers = AppSettings.GetCustomServers();
+        var existingNames = servers.Select(x => x.Name).ToHashSet();
+        var defaults = new[]
+        {
+            (Name: CONST.AppIdMessenger, Url:"https://www.messenger.com/",   IconGlyph:"\uE8BD", Order: 0),
+            (Name: CONST.AppIdZalo,      Url:"https://chat.zalo.me/",        IconGlyph:"\uE91C", Order: 1),
+            (Name: CONST.AppIdTeams,     Url:"https://teams.microsoft.com/", IconGlyph:"\uE902", Order: 2),
+        };
+
         CustomServers.Clear();
-        foreach (var server in AppSettings.GetCustomServers())
+        foreach (var (name, url, icon, order) in defaults.Where(d => !existingNames.Contains(d.Name)))
+        {
+            CustomServers.Add(new CustomServerInfo
+            {
+                Name = name,
+                Url = url,
+                IconGlyph = icon,
+                Order = order,
+                Enable = true
+            });
+        }
+
+        foreach (var server in servers)
             CustomServers.Add(server);
     }
 
