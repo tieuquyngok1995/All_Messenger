@@ -17,7 +17,8 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     private string _name = string.Empty;
     private string _url = string.Empty;
     private string _iconGlyph = "\uE774"; // Globe
-    private bool _enabled = true;
+    private bool _isEnabled = true;
+    private bool _isDefault = false;
     public int _order = 0;
 
     /// <summary>
@@ -56,11 +57,19 @@ public partial class CustomServerInfo : INotifyPropertyChanged
         set { if (_iconGlyph != value) { _iconGlyph = value; Notify(); } }
     }
 
-    public bool Enable
+    public bool IsEnable
     {
-        get => _enabled;
-        set { if (_enabled != value) { _enabled = value; Notify(); } }
+        get => _isEnabled;
+        set { if (_isEnabled != value) { _isEnabled = value; Notify(); } }
     }
+
+    public bool IsDefault
+    {
+        get => _isDefault;
+        set { if (_isDefault != value) { _isDefault = value; Notify(); } }
+    }
+
+    public bool IsCustom => !IsDefault;
 
     /// <summary>
     /// Arrange the display order of the custom servers.

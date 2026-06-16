@@ -137,7 +137,8 @@
                                                 Height="36"
                                                 Click="EditServer_Click"
                                                 Style="{ThemeResource SubtleButtonStyle}"
-                                                ToolTipService.ToolTip="Chỉnh sửa server">
+                                                ToolTipService.ToolTip="Chỉnh sửa server"
+                                                Visibility="{x:Bind IsCustom}">
                                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                                       Glyph="&#xE70F;"
                                                       FontSize="14"
@@ -147,11 +148,23 @@
                                                 Height="36"
                                                 Click="DeleteServer_Click"
                                                 Style="{ThemeResource SubtleButtonStyle}"
-                                                ToolTipService.ToolTip="Xóa server">
+                                                ToolTipService.ToolTip="Xóa server"
+                                                Visibility="{x:Bind IsCustom}">
                                             <FontIcon FontFamily="Segoe MDL2 Assets"
                                                       Glyph="&#xE74D;"
                                                       FontSize="14"
                                                       Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
+                                        </Button>
+                                        <Button Tag="{x:Bind Id}"
+                                            Height="36"
+                                            Click="Hidden_Click"
+                                            Style="{ThemeResource SubtleButtonStyle}"
+                                            ToolTipService.ToolTip="Ẩn server"
+                                            Visibility="{x:Bind IsDefault}">
+                                                                                <FontIcon FontFamily="Segoe MDL2 Assets"
+                                                  Glyph="&#xE74D;"
+                                                  FontSize="14"
+                                                  Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
                                         </Button>
                                     </StackPanel>
                                 </Grid>

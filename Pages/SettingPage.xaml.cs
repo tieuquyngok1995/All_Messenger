@@ -116,7 +116,8 @@ public sealed partial class SettingPage : Page
                 Url = url,
                 IconGlyph = icon,
                 Order = order,
-                Enable = true
+                IsEnable = true,
+                IsDefault = true
             });
         }
 
