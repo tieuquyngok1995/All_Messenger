@@ -38,6 +38,9 @@ public abstract class WebViewPageBase : Page
 
             ConfigureWebView(core, WebView);
 
+            WebViewKeyboardForwarder.Register(core, WebView.DispatcherQueue, OnWebViewKeyCombo);
+
+
             core.PermissionRequested += (s, a) =>
                 WebViewNotificationHelper.AllowNotificationPermission(s, a);
 
@@ -52,6 +55,8 @@ public abstract class WebViewPageBase : Page
             // Apply the app theme to the WebView immediately after initialization
             ApplyColorSchemeFromCurrentTheme();
 
+
+
             core.NavigationCompleted += (s, e) => { if (!_isReady) _isReady = true; };
 
             WebView.Source = StartUri;
@@ -61,6 +66,9 @@ public abstract class WebViewPageBase : Page
             AppLogger.Log($"[WebViewPageBase] InitWebView:{AppId} error: {ex.Message}", ex);
         }
     }
+
+    protected virtual void OnWebViewKeyCombo(WebViewKeyCombo combo) => WebViewKeyEventBus.Raise(combo);
+
 
     /// <summary>
     /// Override to add page-specific logic (e.g., session detector, special configuration).
@@ -146,6 +154,8 @@ public abstract class WebViewPageBase : Page
         settings.IsPasswordAutosaveEnabled = true;
         settings.AreBrowserAcceleratorKeysEnabled = false;
         settings.IsSwipeNavigationEnabled = false;
+        // Turn on to debug and test
+        settings.AreDefaultContextMenusEnabled = false;
     }
 
     /// <summary>
