@@ -55,6 +55,10 @@ public static class WebViewNotificationHelper
                     postMessage({ type: "badge", count });
                 }
 
+                function postShortcut(action, key) {
+                    postMessage({ type: "shortcut", action, key });
+                }
+
                 function buildNotificationContent(title, body) {
                     if (title && body) return { title, body };
 
@@ -202,8 +206,37 @@ public static class WebViewNotificationHelper
                     },
                     { once: true },
                 );
-            })();
 
+                // ════════════════════════════════════════════════════════════
+                //  Hook 4: Event key down
+                // ════════════════════════════════════════════════════════════
+                window.addEventListener('keydown', function (e) {
+                    var alt = e.altKey, ctrl = e.ctrlKey;
+
+                    // Alt+0..9
+                    if (alt && e.key >= '0' && e.key <= '9') {
+                        postShortcut('switchTab', e.key);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+
+                    // Alt+` (backquote)
+                    if (alt && e.key === '`') {
+                        postShortcut('nextTab');
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+
+                    // Ctrl+Tab / Ctrl+Shift+Tab
+                    if (ctrl && e.key === '`') {
+                        postShortcut('prevTab');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+                }, true);
+            })();
         """;
 
         await webView.AddScriptToExecuteOnDocumentCreatedAsync(script);
@@ -223,6 +256,28 @@ public static class WebViewNotificationHelper
             case CoreWebView2PermissionKind.Microphone:
             case CoreWebView2PermissionKind.Camera:
                 args.State = CoreWebView2PermissionState.Allow;
+                break;
+            case CoreWebView2PermissionKind.UnknownPermission:
+                break;
+            case CoreWebView2PermissionKind.Geolocation:
+                break;
+            case CoreWebView2PermissionKind.OtherSensors:
+                break;
+            case CoreWebView2PermissionKind.ClipboardRead:
+                break;
+            case CoreWebView2PermissionKind.MultipleAutomaticDownloads:
+                break;
+            case CoreWebView2PermissionKind.FileReadWrite:
+                break;
+            case CoreWebView2PermissionKind.Autoplay:
+                break;
+            case CoreWebView2PermissionKind.LocalFonts:
+                break;
+            case CoreWebView2PermissionKind.MidiSystemExclusiveMessages:
+                break;
+            case CoreWebView2PermissionKind.WindowManagement:
+                break;
+            case CoreWebView2PermissionKind.PersistentStorage:
                 break;
             default:
                 args.State = CoreWebView2PermissionState.Deny;
@@ -252,6 +307,26 @@ public static class WebViewNotificationHelper
             {
                 int count = root.TryGetProperty("count", out var cp) ? cp.GetInt32() : 0;
                 NotificationService.Instance.SetBadgeDirect(appId, count);
+                return;
+            }
+
+            if (msgType == "shortcut")
+            {
+                string action = root.TryGetProperty("action", out var a) ? a.GetString() ?? string.Empty : string.Empty;
+                if (action.Equals("switchTab"))
+                {
+                    int key = root.TryGetProperty("key", out var k) && int.TryParse(k.GetString(), out var value) ? value : 0;
+                    WebViewKeyEventBus.Raise(new WebViewKeyCombo(WebViewKeyAction.SwitchTab, key));
+                }
+                else if (action.Equals("nextTab"))
+                {
+                    WebViewKeyEventBus.Raise(new WebViewKeyCombo(WebViewKeyAction.NextTab));
+                }
+                else if (action.Equals("prevTab"))
+                {
+                    WebViewKeyEventBus.Raise(new WebViewKeyCombo(WebViewKeyAction.PrevTab));
+                }
+
                 return;
             }
 
