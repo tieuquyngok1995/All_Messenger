@@ -38,9 +38,6 @@ public abstract class WebViewPageBase : Page
 
             ConfigureWebView(core, WebView);
 
-            WebViewKeyboardForwarder.Register(core, WebView.DispatcherQueue, OnWebViewKeyCombo);
-
-
             core.PermissionRequested += (s, a) =>
                 WebViewNotificationHelper.AllowNotificationPermission(s, a);
 
@@ -66,9 +63,6 @@ public abstract class WebViewPageBase : Page
             AppLogger.Log($"[WebViewPageBase] InitWebView:{AppId} error: {ex.Message}", ex);
         }
     }
-
-    protected virtual void OnWebViewKeyCombo(WebViewKeyCombo combo) => WebViewKeyEventBus.Raise(combo);
-
 
     /// <summary>
     /// Override to add page-specific logic (e.g., session detector, special configuration).

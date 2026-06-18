@@ -6,13 +6,15 @@ using System.Threading.Tasks;
 
 namespace All_in_One_Messenger.Helper;
 
-public static class WebViewNotificationHelper {
+public static class WebViewNotificationHelper
+{
     /// <summary>
     /// Inject script
     /// Call EnsureCoreWebView2Async after, BEFORE set the Source.
     /// Block the window.Notification API and send messages to WinUI.
     /// </summary>
-    public static async Task InjectNotificationHookAsync(CoreWebView2 webView) {
+    public static async Task InjectNotificationHookAsync(CoreWebView2 webView)
+    {
         const string script = """
             (function () {
                 if (window.__allMessengerHooked) return;
@@ -213,9 +215,19 @@ public static class WebViewNotificationHelper {
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="args"></param>
-    public static void AllowNotificationPermission(CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args) {
-        if (args.PermissionKind == CoreWebView2PermissionKind.Notifications)
-            args.State = CoreWebView2PermissionState.Allow;
+    public static void AllowNotificationPermission(CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args)
+    {
+        switch (args.PermissionKind)
+        {
+            case CoreWebView2PermissionKind.Notifications:
+            case CoreWebView2PermissionKind.Microphone:
+            case CoreWebView2PermissionKind.Camera:
+                args.State = CoreWebView2PermissionState.Allow;
+                break;
+            default:
+                args.State = CoreWebView2PermissionState.Deny;
+                break;
+        }
     }
 
     /// <summary>
@@ -224,8 +236,10 @@ public static class WebViewNotificationHelper {
     /// Automatically forward to NotificationService if the message is in the correct format.
     /// </summary>
     /// <param name="appId">For example: "Teams", "Messenger", "Zalo"</param>
-    public static void HandleWebMessage(string appId, CoreWebView2WebMessageReceivedEventArgs e) {
-        try {
+    public static void HandleWebMessage(string appId, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
             string raw = e.TryGetWebMessageAsString();
 
             using var doc = JsonDocument.Parse(raw);
@@ -234,17 +248,18 @@ public static class WebViewNotificationHelper {
             if (!root.TryGetProperty("type", out var typeProp)) return;
             string msgType = typeProp.GetString() ?? string.Empty;
 
-            if (msgType == "badge") {
-                int count = root.TryGetProperty("count", out var cp) ?cp.GetInt32(): 0;
+            if (msgType == "badge")
+            {
+                int count = root.TryGetProperty("count", out var cp) ? cp.GetInt32() : 0;
                 NotificationService.Instance.SetBadgeDirect(appId, count);
                 return;
             }
 
             if (msgType != "notification") return;
 
-            string title = root.TryGetProperty("title", out var t) ?t.GetString() ?? string.Empty : string.Empty;
-            string body = root.TryGetProperty("body", out var b) ?b.GetString() ?? string.Empty : string.Empty;
-            string icon = root.TryGetProperty("icon", out var i) ?i.GetString() ?? string.Empty : string.Empty;
+            string title = root.TryGetProperty("title", out var t) ? t.GetString() ?? string.Empty : string.Empty;
+            string body = root.TryGetProperty("body", out var b) ? b.GetString() ?? string.Empty : string.Empty;
+            string icon = root.TryGetProperty("icon", out var i) ? i.GetString() ?? string.Empty : string.Empty;
 
             if (!NotificationFilter.ShouldProcess(appId, title, body, icon))
                 return;
@@ -263,14 +278,15 @@ public static class WebViewNotificationHelper {
     /// Each app has different URL logic — passed in via predicate.
     /// </summary>
     public static void AttachSessionDetector(string appId, CoreWebView2 webView, Func<string, bool> isLoggedInUrl, bool resetOnFalse = true)
-{
-    webView.NavigationCompleted += (sender, args) => {
+    {
+        webView.NavigationCompleted += (sender, args) =>
+        {
             bool loggedIn = isLoggedInUrl(sender.Source);
 
-        // reset=false: only set true when login is detected, do not reset when
-        // navigate to a different domain (e.g., facebook.com link preview in Messenger)
-        if (loggedIn || resetOnFalse)
-            NotificationService.Instance.SetSession(appId, loggedIn);
-    };
-}
+            // reset=false: only set true when login is detected, do not reset when
+            // navigate to a different domain (e.g., facebook.com link preview in Messenger)
+            if (loggedIn || resetOnFalse)
+                NotificationService.Instance.SetSession(appId, loggedIn);
+        };
+    }
 }
