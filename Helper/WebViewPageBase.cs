@@ -52,6 +52,8 @@ public abstract class WebViewPageBase : Page
             // Apply the app theme to the WebView immediately after initialization
             ApplyColorSchemeFromCurrentTheme();
 
+
+
             core.NavigationCompleted += (s, e) => { if (!_isReady) _isReady = true; };
 
             WebView.Source = StartUri;
@@ -146,6 +148,8 @@ public abstract class WebViewPageBase : Page
         settings.IsPasswordAutosaveEnabled = true;
         settings.AreBrowserAcceleratorKeysEnabled = false;
         settings.IsSwipeNavigationEnabled = false;
+        // Turn on to debug and test
+        settings.AreDefaultContextMenusEnabled = false;
     }
 
     /// <summary>
