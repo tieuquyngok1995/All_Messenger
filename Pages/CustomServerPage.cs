@@ -83,6 +83,7 @@ public sealed partial class CustomServerPage : WebViewPageBase
     {
         // Only process the first navigation or when the URL is StartUri
         bool failed = !args.IsSuccess && IsConnectionError(args.WebErrorStatus);
+        if (failed) AppLogger.Log($"CustomServerPage OnNavigationCompleted failed: [WebView Error] Url={sender.Source}, Status={args.WebErrorStatus}, NavigationId={args.NavigationId}", "");
 
         _webView.Visibility = failed ? Visibility.Collapsed : Visibility.Visible;
         if (_errorOverlay is not null)
@@ -98,11 +99,7 @@ public sealed partial class CustomServerPage : WebViewPageBase
         CoreWebView2WebErrorStatus.CannotConnect or
         CoreWebView2WebErrorStatus.HostNameNotResolved or
         CoreWebView2WebErrorStatus.Timeout or
-        CoreWebView2WebErrorStatus.ServerUnreachable or
-        CoreWebView2WebErrorStatus.ConnectionAborted or
-        CoreWebView2WebErrorStatus.ConnectionReset or
-        CoreWebView2WebErrorStatus.Disconnected or
-        CoreWebView2WebErrorStatus.OperationCanceled;
+        CoreWebView2WebErrorStatus.ServerUnreachable;
 
     private Grid BuildErrorOverlay()
     {

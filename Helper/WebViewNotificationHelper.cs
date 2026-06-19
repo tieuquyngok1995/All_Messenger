@@ -6,13 +6,15 @@ using System.Threading.Tasks;
 
 namespace All_in_One_Messenger.Helper;
 
-public static class WebViewNotificationHelper {
+public static class WebViewNotificationHelper
+{
     /// <summary>
     /// Inject script
     /// Call EnsureCoreWebView2Async after, BEFORE set the Source.
     /// Block the window.Notification API and send messages to WinUI.
     /// </summary>
-    public static async Task InjectNotificationHookAsync(CoreWebView2 webView) {
+    public static async Task InjectNotificationHookAsync(CoreWebView2 webView)
+    {
         const string script = """
             (function () {
                 if (window.__allMessengerHooked) return;
@@ -46,11 +48,15 @@ public static class WebViewNotificationHelper {
 
                 function postNotification(title, body, icon) {
                     const content = buildNotificationContent(title, body);
-                    postMessage({ type: "notification", ...content, icon: icon || "", });
+                    postMessage({ type: "notification", ...content, icon: icon || "" });
                 }
 
                 function postBadge(count) {
                     postMessage({ type: "badge", count });
+                }
+
+                function postShortcut(action, key) {
+                    postMessage({ type: "shortcut", action, key });
                 }
 
                 function buildNotificationContent(title, body) {
@@ -65,7 +71,10 @@ public static class WebViewNotificationHelper {
                     }
 
                     if (APP.isTeams) {
-                        const raw = document.title.replace(/^\(\d+\)\s*/, "").replace(/\s*[\|–]\s*Microsoft Teams.*/i, "").trim();
+                        const raw = document.title
+                            .replace(/^\(\d+\)\s*/, "")
+                            .replace(/\s*[\|–]\s*Microsoft Teams.*/i, "")
+                            .trim();
                         return {
                             title: title || raw || "Microsoft Teams",
                             body: body || "Bạn có tin nhắn mới",
@@ -93,11 +102,14 @@ public static class WebViewNotificationHelper {
                 // ════════════════════════════════════════════════════════════
                 const _OriginalNotification = window.Notification;
                 function HookedNotification(title, options = {}) {
-                    console.log("Hook 1", title, options.body, options.icon);
                     postNotification(title, options.body, options.icon);
-                    if (APP.isCustom) {updateBadge();}
-                    try { const n = new _OriginalNotification(title, options); n.close(); return n; }
-                    catch { return { title, body: options.body, icon: options.icon, close() { } }; }
+                    try {
+                        const n = new _OriginalNotification(title, options);
+                        n.close();
+                        return n;
+                    } catch {
+                        return { title, body: options.body, icon: options.icon, close() { } };
+                    }
                 }
                 HookedNotification.prototype = _OriginalNotification.prototype;
                 Object.defineProperty(HookedNotification, "permission", { get: () => "granted" });
@@ -108,12 +120,9 @@ public static class WebViewNotificationHelper {
                 // ════════════════════════════════════════════════════════════
                 //  Hook 2: Service worker hook
                 // ════════════════════════════════════════════════════════════
-                const _origShow =  typeof ServiceWorkerRegistration !== "undefined"
-                    ? ServiceWorkerRegistration.prototype.showNotification
-                    : null;
+                const _origShow = typeof ServiceWorkerRegistration !== "undefined" ? ServiceWorkerRegistration.prototype.showNotification : null;
                 if (_origShow) {
                     ServiceWorkerRegistration.prototype.showNotification = function (title, options = {}) {
-                        console.log("Hook 2", title, options.body, options.icon);
                         postNotification(title, options.body, options.icon);
                         return _origShow.call(this, title, options);
                     };
@@ -128,9 +137,11 @@ public static class WebViewNotificationHelper {
                     const match = document.title.match(/^\((\d+)\)/);
                     const titleCount = match ? parseInt(match[1], 10) : 0;
 
-                    const domCount = (APP.isCustom)
-                        ? document.querySelectorAll("li.SidebarChannel.unread").length
-                        : 0;
+                    let domCount = 0;
+                    if (APP.isCustom) {
+                        const group = document.querySelector('.SidebarChannelGroup[data-rbd-draggable-id^="channels_"]');
+                        domCount = group.querySelectorAll('li.SidebarChannel.unread').length;
+                    }
 
                     if (!match) return domCount;
                     return titleCount + domCount;
@@ -176,10 +187,55 @@ public static class WebViewNotificationHelper {
                         subtree: true,
                     });
                     // DOMContentLoaded as the final fallback
-                    document.addEventListener("DOMContentLoaded", () => {
-                        if (attachTitleObserver()) rootObserver.disconnect();
-                    }, { once: true });
+                    document.addEventListener(
+                        "DOMContentLoaded",
+                        () => {
+                            if (attachTitleObserver()) rootObserver.disconnect();
+                        },
+                        { once: true },
+                    );
                 }
+
+                // Select the area to listen to and capture events when the channel unreads.
+                document.addEventListener(
+                    "DOMContentLoaded",
+                    function () {
+                        updateBadge();
+                        const sidebar = document.querySelector(".SidebarChannelGroup");
+                        if (sidebar) new MutationObserver(updateBadge).observe(sidebar, { subtree: true, childList: true, attributes: true, attributeFilter: ["class"] });
+                    },
+                    { once: true },
+                );
+
+                // ════════════════════════════════════════════════════════════
+                //  Hook 4: Event key down
+                // ════════════════════════════════════════════════════════════
+                window.addEventListener('keydown', function (e) {
+                    var alt = e.altKey, ctrl = e.ctrlKey;
+
+                    // Alt+0..9
+                    if (alt && e.key >= '0' && e.key <= '9') {
+                        postShortcut('switchTab', e.key);
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+
+                    // Alt+` (backquote)
+                    if (alt && e.key === '`') {
+                        postShortcut('nextTab');
+                        e.preventDefault();
+                        e.stopPropagation();
+                    }
+
+                    // Ctrl+Tab / Ctrl+Shift+Tab
+                    if (ctrl && e.key === '`') {
+                        postShortcut('prevTab');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
+                }, true);
             })();
         """;
 
@@ -192,9 +248,41 @@ public static class WebViewNotificationHelper {
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="args"></param>
-    public static void AllowNotificationPermission(CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args) {
-        if (args.PermissionKind == CoreWebView2PermissionKind.Notifications)
-            args.State = CoreWebView2PermissionState.Allow;
+    public static void AllowNotificationPermission(CoreWebView2 sender, CoreWebView2PermissionRequestedEventArgs args)
+    {
+        switch (args.PermissionKind)
+        {
+            case CoreWebView2PermissionKind.Notifications:
+            case CoreWebView2PermissionKind.Microphone:
+            case CoreWebView2PermissionKind.Camera:
+                args.State = CoreWebView2PermissionState.Allow;
+                break;
+            case CoreWebView2PermissionKind.UnknownPermission:
+                break;
+            case CoreWebView2PermissionKind.Geolocation:
+                break;
+            case CoreWebView2PermissionKind.OtherSensors:
+                break;
+            case CoreWebView2PermissionKind.ClipboardRead:
+                break;
+            case CoreWebView2PermissionKind.MultipleAutomaticDownloads:
+                break;
+            case CoreWebView2PermissionKind.FileReadWrite:
+                break;
+            case CoreWebView2PermissionKind.Autoplay:
+                break;
+            case CoreWebView2PermissionKind.LocalFonts:
+                break;
+            case CoreWebView2PermissionKind.MidiSystemExclusiveMessages:
+                break;
+            case CoreWebView2PermissionKind.WindowManagement:
+                break;
+            case CoreWebView2PermissionKind.PersistentStorage:
+                break;
+            default:
+                args.State = CoreWebView2PermissionState.Deny;
+                break;
+        }
     }
 
     /// <summary>
@@ -203,8 +291,10 @@ public static class WebViewNotificationHelper {
     /// Automatically forward to NotificationService if the message is in the correct format.
     /// </summary>
     /// <param name="appId">For example: "Teams", "Messenger", "Zalo"</param>
-    public static void HandleWebMessage(string appId, CoreWebView2WebMessageReceivedEventArgs e) {
-        try {
+    public static void HandleWebMessage(string appId, CoreWebView2WebMessageReceivedEventArgs e)
+    {
+        try
+        {
             string raw = e.TryGetWebMessageAsString();
 
             using var doc = JsonDocument.Parse(raw);
@@ -213,17 +303,38 @@ public static class WebViewNotificationHelper {
             if (!root.TryGetProperty("type", out var typeProp)) return;
             string msgType = typeProp.GetString() ?? string.Empty;
 
-            if (msgType == "badge") {
-                int count = root.TryGetProperty("count", out var cp) ?cp.GetInt32(): 0;
+            if (msgType == "badge")
+            {
+                int count = root.TryGetProperty("count", out var cp) ? cp.GetInt32() : 0;
                 NotificationService.Instance.SetBadgeDirect(appId, count);
+                return;
+            }
+
+            if (msgType == "shortcut")
+            {
+                string action = root.TryGetProperty("action", out var a) ? a.GetString() ?? string.Empty : string.Empty;
+                if (action.Equals("switchTab"))
+                {
+                    int key = root.TryGetProperty("key", out var k) && int.TryParse(k.GetString(), out var value) ? value : 0;
+                    WebViewKeyEventBus.Raise(new WebViewKeyCombo(WebViewKeyAction.SwitchTab, key));
+                }
+                else if (action.Equals("nextTab"))
+                {
+                    WebViewKeyEventBus.Raise(new WebViewKeyCombo(WebViewKeyAction.NextTab));
+                }
+                else if (action.Equals("prevTab"))
+                {
+                    WebViewKeyEventBus.Raise(new WebViewKeyCombo(WebViewKeyAction.PrevTab));
+                }
+
                 return;
             }
 
             if (msgType != "notification") return;
 
-            string title = root.TryGetProperty("title", out var t) ?t.GetString() ?? string.Empty : string.Empty;
-            string body = root.TryGetProperty("body", out var b) ?b.GetString() ?? string.Empty : string.Empty;
-            string icon = root.TryGetProperty("icon", out var i) ?i.GetString() ?? string.Empty : string.Empty;
+            string title = root.TryGetProperty("title", out var t) ? t.GetString() ?? string.Empty : string.Empty;
+            string body = root.TryGetProperty("body", out var b) ? b.GetString() ?? string.Empty : string.Empty;
+            string icon = root.TryGetProperty("icon", out var i) ? i.GetString() ?? string.Empty : string.Empty;
 
             if (!NotificationFilter.ShouldProcess(appId, title, body, icon))
                 return;
@@ -242,14 +353,15 @@ public static class WebViewNotificationHelper {
     /// Each app has different URL logic — passed in via predicate.
     /// </summary>
     public static void AttachSessionDetector(string appId, CoreWebView2 webView, Func<string, bool> isLoggedInUrl, bool resetOnFalse = true)
-{
-    webView.NavigationCompleted += (sender, args) => {
+    {
+        webView.NavigationCompleted += (sender, args) =>
+        {
             bool loggedIn = isLoggedInUrl(sender.Source);
 
-        // reset=false: only set true when login is detected, do not reset when
-        // navigate to a different domain (e.g., facebook.com link preview in Messenger)
-        if (loggedIn || resetOnFalse)
-            NotificationService.Instance.SetSession(appId, loggedIn);
-    };
-}
+            // reset=false: only set true when login is detected, do not reset when
+            // navigate to a different domain (e.g., facebook.com link preview in Messenger)
+            if (loggedIn || resetOnFalse)
+                NotificationService.Instance.SetSession(appId, loggedIn);
+        };
+    }
 }

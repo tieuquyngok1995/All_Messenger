@@ -121,6 +121,7 @@ public sealed partial class MainWindow : Window
         // Register for KeyDown after the content is ready
         Content.KeyUp += Window_KeyUp;
         Content.KeyDown += Window_KeyDown;
+        WebViewKeyEventBus.KeyComboReceived += OnShortcutFromWebView;
 
         NavView.Loaded += (_, _) => UpdateNavItemTooltips();
         SettingPage.OnServersReordered += (_, _) => RebuildCustomNavItems();
@@ -251,7 +252,6 @@ public sealed partial class MainWindow : Window
         if (!_isTabHeld) return;
 
         var menuItems = NavView.MenuItems.OfType<NavigationViewItem>().ToList();
-
         int currentIndex = NavView.SelectedItem is NavigationViewItem selectedItem ? menuItems.IndexOf(selectedItem) : -1;
 
         switch (e.Key)
@@ -272,6 +272,32 @@ public sealed partial class MainWindow : Window
             case VirtualKey.Number7: case VirtualKey.NumberPad7: SelectTabByIndex(menuItems, 6); e.Handled = true; break;
             case VirtualKey.Number8: case VirtualKey.NumberPad8: SelectTabByIndex(menuItems, 7); e.Handled = true; break;
             case VirtualKey.Number9: case VirtualKey.NumberPad9: SelectTabByIndex(menuItems, 8); e.Handled = true; break;
+        }
+    }
+
+    private void OnShortcutFromWebView(WebViewKeyCombo combo) => HandleShortcut(combo);
+
+    private void HandleShortcut(WebViewKeyCombo combo)
+    {
+        var menuItems = NavView.MenuItems.OfType<NavigationViewItem>().ToList();
+        int currentIndex = NavView.SelectedItem is NavigationViewItem selectedItem ? menuItems.IndexOf(selectedItem) : -1;
+        if (menuItems.Count == 0) return;
+
+        switch (combo.Action)
+        {
+            case WebViewKeyAction.SwitchTab:
+                SelectTabByIndex(menuItems, combo.TabIndex - 1);
+                break;
+
+            case WebViewKeyAction.NextTab:
+                int next = (currentIndex + 1 + menuItems.Count) % menuItems.Count;
+                NavView.SelectedItem = menuItems[next];
+                break;
+
+            case WebViewKeyAction.PrevTab:
+                int prevIndex = (currentIndex - 1 + menuItems.Count) % menuItems.Count;
+                NavView.SelectedItem = menuItems[prevIndex];
+                break;
         }
     }
 
