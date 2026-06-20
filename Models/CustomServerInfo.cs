@@ -1,9 +1,10 @@
+using All_in_One_Messenger.Helper;
 using Microsoft.UI.Xaml;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace All_in_One_Messenger.Helper;
+namespace All_in_One_Messenger.Models;
 
 /// <summary>
 /// Information about a custom chat server added by the user.
@@ -82,9 +83,9 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     {
         return id switch
         {
-            CONST.TabZalo => true,
-            CONST.TabTeams => true,
-            CONST.TabMessenger => true,
+            AppConst.TabZalo => true,
+            AppConst.TabTeams => true,
+            AppConst.TabMessenger => true,
             _ => false
         };
     }

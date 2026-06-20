@@ -1,6 +1,6 @@
 ﻿namespace All_in_One_Messenger.Helper;
 
-public static class CONST
+public static class AppConst
 {
     // ── Theme ────────────────────────────────────────────────────────────────
     public const string ThemeKey = "AppTheme";

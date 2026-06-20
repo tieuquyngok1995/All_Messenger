@@ -1,4 +1,5 @@
 ﻿using All_in_One_Messenger.Helper;
+using All_in_One_Messenger.Models;
 using All_in_One_Messenger.Pages;
 using All_in_One_Messenger.Services;
 using Microsoft.UI;
@@ -48,27 +49,27 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         // InitializeAssets
-        _messengerLight = new(new Uri(CONST.AssetMessengerLight));
-        _messengerDark = new(new Uri(CONST.AssetMessengerDark));
-        _zaloLight = new(new Uri(CONST.AssetZaloLight));
-        _zaloDark = new(new Uri(CONST.AssetZaloDark));
-        _teamsLight = new(new Uri(CONST.AssetTeamsLight));
-        _teamsDark = new(new Uri(CONST.AssetTeamsDark));
+        _messengerLight = new(new Uri(AppConst.AssetMessengerLight));
+        _messengerDark = new(new Uri(AppConst.AssetMessengerDark));
+        _zaloLight = new(new Uri(AppConst.AssetZaloLight));
+        _zaloDark = new(new Uri(AppConst.AssetZaloDark));
+        _teamsLight = new(new Uri(AppConst.AssetTeamsLight));
+        _teamsDark = new(new Uri(AppConst.AssetTeamsDark));
 
         // InitializeTabs
         _tabs = new()
         {
-            [CONST.TabZalo] = (ZaloPage, CONST.AppIdZalo, ZaloTab),
-            [CONST.TabTeams] = (TeamsPage, CONST.AppIdTeams, TeamsTab),
-            [CONST.TabMessenger] = (MessengerPage, CONST.AppIdMessenger, MessengerTab),
-            [CONST.TabSettings] = (SettingPage, string.Empty, null!),
+            [AppConst.TabZalo] = (ZaloPage, AppConst.AppIdZalo, ZaloTab),
+            [AppConst.TabTeams] = (TeamsPage, AppConst.AppIdTeams, TeamsTab),
+            [AppConst.TabMessenger] = (MessengerPage, AppConst.AppIdMessenger, MessengerTab),
+            [AppConst.TabSettings] = (SettingPage, string.Empty, null!),
         };
 
         // Load saved custom servers
         var servers = AppSettings.GetCustomServers().OrderBy(s => s.Order).ToList();
         foreach (var server in servers)
         {
-            if (server.Name.Equals(CONST.AppIdZalo) || server.Name.Equals(CONST.AppIdTeams) || server.Name.Equals(CONST.AppIdMessenger))
+            if (server.Name.Equals(AppConst.AppIdZalo) || server.Name.Equals(AppConst.AppIdTeams) || server.Name.Equals(AppConst.AppIdMessenger))
             {
                 var tab = _tabs.FirstOrDefault(x => x.Value.AppId == server.Name).Value;
                 if (tab.MenuItem == null) continue;
@@ -83,7 +84,7 @@ public sealed partial class MainWindow : Window
 
         WebViewProfileHelper.CleanupUnusedProfiles(
             servers.Select(s => s.Id),
-            exclude: [CONST.AppIdTeams, CONST.AppIdMessenger, CONST.AppIdZalo]
+            exclude: [AppConst.AppIdTeams, AppConst.AppIdMessenger, AppConst.AppIdZalo]
         );
 
         // InitializeWindow
@@ -128,9 +129,9 @@ public sealed partial class MainWindow : Window
         var deadline = DateTime.UtcNow.AddSeconds(20);
         while (DateTime.UtcNow < deadline)
         {
-            var (_, messenger) = GetWebViewInfo(CONST.AppIdMessenger);
-            var (_, teams) = GetWebViewInfo(CONST.AppIdTeams);
-            var (_, zalo) = GetWebViewInfo(CONST.AppIdZalo);
+            var (_, messenger) = GetWebViewInfo(AppConst.AppIdMessenger);
+            var (_, teams) = GetWebViewInfo(AppConst.AppIdTeams);
+            var (_, zalo) = GetWebViewInfo(AppConst.AppIdZalo);
             if (messenger && teams && zalo) break;
             await Task.Delay(100);
         }
@@ -192,9 +193,9 @@ public sealed partial class MainWindow : Window
     /// <returns></returns>
     private (WebView2? WebView, bool IsReady) GetWebViewInfo(string appId) => appId switch
     {
-        CONST.AppIdZalo => (ZaloPage.WebView, ZaloPage.IsReady),
-        CONST.AppIdTeams => (TeamsPage.WebView, TeamsPage.IsReady),
-        CONST.AppIdMessenger => (MessengerPage.WebView, MessengerPage.IsReady),
+        AppConst.AppIdZalo => (ZaloPage.WebView, ZaloPage.IsReady),
+        AppConst.AppIdTeams => (TeamsPage.WebView, TeamsPage.IsReady),
+        AppConst.AppIdMessenger => (MessengerPage.WebView, MessengerPage.IsReady),
         _ => _customPages.TryGetValue(appId, out var p) ? (p.WebView, p.IsReady) : (null, false)
     };
     #endregion
@@ -369,7 +370,7 @@ public sealed partial class MainWindow : Window
     internal async void NavigateToSettings()
     {
         NavView.SelectedItem = NavView.SettingsItem;
-        await SwitchTab(CONST.TabSettings);
+        await SwitchTab(AppConst.TabSettings);
     }
 
     internal async void NavigateToTab(string appId)
@@ -391,8 +392,8 @@ public sealed partial class MainWindow : Window
     {
         if (args.IsSettingsSelected)
         {
-            if (_activeTab == CONST.TabSettings) return;
-            await SwitchTab(CONST.TabSettings);
+            if (_activeTab == AppConst.TabSettings) return;
+            await SwitchTab(AppConst.TabSettings);
             return;
         }
 
@@ -533,26 +534,26 @@ public sealed partial class MainWindow : Window
     #region Theme
     private static void SaveTheme(string theme)
     {
-        AppSettings.Set(CONST.ThemeKey, theme);
+        AppSettings.Set(AppConst.ThemeKey, theme);
     }
 
     private static string LoadTheme()
     {
-        return AppSettings.Get(CONST.ThemeKey) ?? CONST.ThemeSystem;
+        return AppSettings.Get(AppConst.ThemeKey) ?? AppConst.ThemeSystem;
     }
 
     private void ApplyTheme(string theme)
     {
         switch (theme)
         {
-            case CONST.ThemeDark:
+            case AppConst.ThemeDark:
                 DarkModeToggle.IsChecked = true;
                 ((FrameworkElement)Content).RequestedTheme = ElementTheme.Dark;
                 ThemeIcon.Glyph = Glyphlight;
                 ApplyTitleBarTheme(true);
                 break;
 
-            case CONST.ThemeLight:
+            case AppConst.ThemeLight:
                 ((FrameworkElement)Content).RequestedTheme = ElementTheme.Light;
                 ThemeIcon.Glyph = GlyphDark;
                 ApplyTitleBarTheme(false);
@@ -569,7 +570,7 @@ public sealed partial class MainWindow : Window
     {
         ThemeIcon.Glyph = Glyphlight;
         ((FrameworkElement)Content).RequestedTheme = ElementTheme.Dark;
-        SaveTheme(CONST.ThemeDark);
+        SaveTheme(AppConst.ThemeDark);
         UpdateIcons();
         ApplyTitleBarTheme(true);
     }
@@ -578,7 +579,7 @@ public sealed partial class MainWindow : Window
     {
         ThemeIcon.Glyph = GlyphDark;
         ((FrameworkElement)Content).RequestedTheme = ElementTheme.Light;
-        SaveTheme(CONST.ThemeLight);
+        SaveTheme(AppConst.ThemeLight);
         UpdateIcons();
         ApplyTitleBarTheme(false);
     }

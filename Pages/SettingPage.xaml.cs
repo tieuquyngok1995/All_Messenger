@@ -1,4 +1,5 @@
 using All_in_One_Messenger.Helper;
+using All_in_One_Messenger.Models;
 using All_in_One_Messenger.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -102,9 +103,9 @@ public sealed partial class SettingPage : Page
         {
             var defaults = new[]
             {
-                (Id: CONST.TabMessenger, Name: CONST.AppIdMessenger, Url:"https://www.messenger.com/",   IconGlyph:"\uE8BD", Order: 0),
-                (Id: CONST.TabZalo,      Name: CONST.AppIdZalo,      Url:"https://chat.zalo.me/",        IconGlyph:"\uec42", Order: 1),
-                (Id: CONST.TabTeams,     Name: CONST.AppIdTeams,     Url:"https://teams.microsoft.com/", IconGlyph:"\uE902", Order: 2),
+                (Id: AppConst.TabMessenger, Name: AppConst.AppIdMessenger, Url:"https://www.messenger.com/",   IconGlyph:"\uE8BD", Order: 0),
+                (Id: AppConst.TabZalo,      Name: AppConst.AppIdZalo,      Url:"https://chat.zalo.me/",        IconGlyph:"\uec42", Order: 1),
+                (Id: AppConst.TabTeams,     Name: AppConst.AppIdTeams,     Url:"https://teams.microsoft.com/", IconGlyph:"\uE902", Order: 2),
             };
 
             foreach (var (id, name, url, icon, order) in defaults)

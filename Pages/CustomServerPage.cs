@@ -1,4 +1,5 @@
 using All_in_One_Messenger.Helper;
+using All_in_One_Messenger.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
