@@ -9,20 +9,20 @@
     xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
     mc:Ignorable="d">
 
-    <ScrollViewer Padding="32 28">
-        <StackPanel Spacing="28" HorizontalAlignment="Stretch">
+    <ScrollViewer Padding="32 24">
+        <StackPanel Spacing="24" HorizontalAlignment="Stretch">
 
             <!-- Page Title -->
             <TextBlock Text="Cài đặt" FontSize="28" FontWeight="SemiBold"/>
 
             <!-- ── Notification ── -->
-            <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
-                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
+            <Border Padding="16 12"
                     CornerRadius="8"
-                    Padding="20 16"
-                    HorizontalAlignment="Stretch">
-                <StackPanel Spacing="12">
+                    BorderThickness="1"
+                    HorizontalAlignment="Stretch"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                <StackPanel Spacing="2">
 
                     <TextBlock Text="Thông báo"
                                FontSize="15"
@@ -30,16 +30,18 @@
 
                     <TextBlock Text="Kiểu thông báo khi có tin nhắn mới."
                                FontSize="13"
-                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"
-                               TextWrapping="Wrap"/>
+                               Padding="12 0"
+                               TextWrapping="Wrap"
+                               Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
 
                     <RadioButtons x:Name="NotificationModeGroup"
-                                  Margin="8 4 0 0"
-                                  MaxColumns="1"
-                                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"
-                                  SelectionChanged="NotificationModeGroup_SelectionChanged">
+                                  MaxColumns="2"
+                                  Margin="12 0"
+                                  SelectionChanged="NotificationModeGroup_SelectionChanged"
+                                  Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}">
                         <RadioButton x:Name="RadioToast"
-                                     Tag="Toast">
+                                     Tag="Toast"
+                                     Margin="0 0 36 0">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Thông báo nổi" FontWeight="SemiBold" FontSize="13"/>
                                 <TextBlock Text="Hiển thị popup thông báo kèm nội dung tin nhắn."
@@ -47,8 +49,7 @@
                                            Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
                             </StackPanel>
                         </RadioButton>
-                        <RadioButton x:Name="RadioSilent"
-                                     Tag="Silent">
+                        <RadioButton x:Name="RadioSilent" Tag="Silent">
                             <StackPanel Spacing="2">
                                 <TextBlock Text="Thông báo ẩn" FontWeight="SemiBold" FontSize="13"/>
                                 <TextBlock Text="Chỉ hiện số badge trên taskbar, không hiện popup."
@@ -63,11 +64,11 @@
             <!-- ── Custom chat server ── -->
             <Border Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
                     BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}"
-                    BorderThickness="1"
-                    CornerRadius="8"
                     Padding="20 16"
+                    CornerRadius="8"
+                    BorderThickness="1"
                     HorizontalAlignment="Stretch">
-                <StackPanel Spacing="12">
+                <StackPanel Spacing="2">
 
                     <TextBlock Text="Chat server tùy chỉnh"
                                FontSize="15"
@@ -75,16 +76,18 @@
 
                     <TextBlock Text="Thêm bất kỳ ứng dụng chat web nào vào menu chính."
                                FontSize="13"
+                               Padding="12 0"
                                Foreground="{ThemeResource TextFillColorSecondaryBrush}"
                                TextWrapping="Wrap"/>
 
                     <!-- List of saved servers -->
                     <ListView x:Name="ServerListView"
-                              ItemsSource="{x:Bind CustomServers}"
-                              SelectionMode="None"                              
+                              Padding="4 0"
+                              AllowDrop="True"                            
                               CanDragItems="True"
+                              SelectionMode="None"  
                               CanReorderItems="True"
-                              AllowDrop="True"
+                              ItemsSource="{x:Bind CustomServers}"
                               DragItemsCompleted="ServerListView_DragItemsCompleted">
                         <ListView.ItemContainerStyle>
                             <Style TargetType="ListViewItem">
@@ -94,7 +97,7 @@
                         </ListView.ItemContainerStyle>
                         <ListView.ItemTemplate>
                             <DataTemplate x:DataType="helper:CustomServerInfo">
-                                <Grid ColumnSpacing="8">
+                                <Grid ColumnSpacing="12">
                                     <Grid.ColumnDefinitions>
                                         <ColumnDefinition Width="Auto"/>
                                         <ColumnDefinition Width="*"/>
@@ -103,7 +106,8 @@
 
                                     <!-- Server icon -->
                                     <Border Grid.Column="0"
-                                            Width="36" Height="36"
+                                            Width="36" 
+                                            Height="36"
                                             CornerRadius="8"
                                             BorderThickness="1"
                                             Background="{ThemeResource ControlFillColorSecondaryBrush}"
@@ -118,7 +122,7 @@
                                     </Border>
 
                                     <!-- Name + URL -->
-                                    <StackPanel Grid.Column="1" Spacing="2" VerticalAlignment="Center">
+                                    <StackPanel Grid.Column="1" Spacing="4" VerticalAlignment="Center">
                                         <TextBlock Text="{x:Bind Name, Mode=OneWay}"
                                                    FontWeight="SemiBold"
                                                    FontSize="13"/>
@@ -130,14 +134,15 @@
 
                                     <!-- Action buttons -->
                                     <StackPanel Grid.Column="2"
-                                                Orientation="Horizontal"
                                                 Spacing="1"
+                                                Orientation="Horizontal"
+                                                HorizontalAlignment="Left" 
                                                 VerticalAlignment="Center">
                                         <Button Tag="{x:Bind Id}"
                                                 Height="36"
                                                 Click="EditServer_Click"
-                                                Style="{ThemeResource SubtleButtonStyle}"
                                                 ToolTipService.ToolTip="Chỉnh sửa server"
+                                                Style="{ThemeResource SubtleButtonStyle}"
                                                 Visibility="{x:Bind GetCustomVisibility(Id)}">
                                             <FontIcon FontFamily="Segoe Fluent Icons"
                                                       Glyph="&#xE70F;"
@@ -147,33 +152,36 @@
                                         <Button Tag="{x:Bind Id}"
                                                 Height="36"
                                                 Click="DeleteServer_Click"
-                                                Style="{ThemeResource SubtleButtonStyle}"
                                                 ToolTipService.ToolTip="Xóa server"
+                                                Style="{ThemeResource SubtleButtonStyle}"
                                                 Visibility="{x:Bind GetCustomVisibility(Id)}">
                                             <FontIcon FontFamily="Segoe Fluent Icons"
                                                       Glyph="&#xE74D;"
                                                       FontSize="14"
                                                       Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
                                         </Button>
-                                        <Button Tag="{x:Bind Id}"
-                                            Height="36"
-                                            Click="HiddenServer_Click"
-                                            Style="{ThemeResource SubtleButtonStyle}"
-                                            ToolTipService.ToolTip="Ẩn server"
-                                            Visibility="{x:Bind GetDefaultVisibility(Id)}">
-                                            <FontIcon FontFamily="Segoe Fluent Icons"
-                                                  Glyph="&#xE890;"
-                                                  FontSize="14"
-                                                  Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
-                                        </Button>
+
+                                        <ToggleButton Tag="{x:Bind Id}"
+                                                      x:Name="HiddenServerToggle"
+                                                      Click="HiddenServerToggle_Click"
+                                                      IsChecked="{x:Bind IsEnable, Mode=TwoWay}"
+                                                      Style="{StaticResource TitleBarToggleButtonStyle}"
+                                                      Visibility="{x:Bind GetDefaultVisibility(Id)}"
+                                                      ToolTipService.ToolTip="Ẩn/hiện server ">
+                                            <FontIcon x:Name="HiddenIcon"
+                                                      FontSize="16"
+                                                      Glyph="{x:Bind GetIconForServer(IsEnable), Mode=OneWay}"
+                                                      FontFamily="Segoe Fluent Icons"/>
+                                        </ToggleButton>
                                     </StackPanel>
                                 </Grid>
                             </DataTemplate>
                         </ListView.ItemTemplate>
-                    </ListView>
+                    </ListView> 
 
                     <!-- Add button -->
                     <Button x:Name="AddServerButton"
+                            Margin="9 0 0 0 "
                             Click="AddServer_Click"
                             Style="{ThemeResource DefaultButtonStyle}"
                             HorizontalAlignment="Left">
@@ -185,6 +193,49 @@
                         </StackPanel>
                     </Button>
 
+                </StackPanel>
+            </Border>
+
+            <!-- ── Check update ── -->
+            <Border Padding="16 12"
+                    CornerRadius="8"
+                    BorderThickness="1"
+                    HorizontalAlignment="Stretch"
+                    Background="{ThemeResource CardBackgroundFillColorDefaultBrush}"
+                    BorderBrush="{ThemeResource CardStrokeColorDefaultBrush}">
+                
+                <StackPanel Spacing="2">
+
+                    <TextBlock Text="Giới thiệu"
+                               FontSize="15"
+                               FontWeight="SemiBold"/>
+                    
+                    <Grid RowSpacing="8">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+
+                        <TextBlock Grid.Column="0"
+                                   Padding="12 0"
+                                   x:Name="VersionText"
+                                   FontSize="13"
+                                   TextWrapping="Wrap"
+                                   Foreground="{ThemeResource TextFillColorSecondaryBrush}"/>
+
+                    <!-- Add button -->
+                        <Button Grid.Column="1"
+                                x:Name="CheckUpdate"
+                                Click="CheckUpdate_Click"
+                                Style="{ThemeResource DefaultButtonStyle}">
+                            <StackPanel Orientation="Horizontal" Spacing="8">
+                                <FontIcon FontFamily="Segoe Fluent Icons"
+                                          Glyph="&#xE895;"
+                                          FontSize="14"/>
+                                <TextBlock Text="Kiểm tra cập nhật" />
+                            </StackPanel>
+                        </Button>
+                    </Grid>
                 </StackPanel>
             </Border>
 

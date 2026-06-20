@@ -19,48 +19,42 @@
             </Grid.ColumnDefinitions>
 
             <!-- LEFT TITLE -->
-            <StackPanel Orientation="Horizontal"
-                VerticalAlignment="Center"
-                Spacing="8"
-                Margin="12,0">
+            <StackPanel Spacing="8"
+                        Margin="12,0"
+                        VerticalAlignment="Center"
+                        Orientation="Horizontal">
 
-                <Image Source="ms-appx:///Assets/logo.png"
-                    Width="20"
-                    Height="20"/>
+                <Image Source="ms-appx:///Assets/logo.png" Width="20" Height="20"/>
 
-                <TextBlock Text="All-in-One Messenger"
-                    VerticalAlignment="Center"/>
+                <TextBlock Text="All-in-One Messenger" VerticalAlignment="Center"/>
             </StackPanel>
 
             <!-- RIGHT BUTTONS -->
-            <StackPanel Orientation="Horizontal"
-                    Grid.Column="1"
-                    Spacing="1"
-                    Margin="0,0,142,0">
+            <StackPanel Spacing="1"
+                        Grid.Column="1"
+                        Margin="0,0,142,0"
+                        Orientation="Horizontal">
 
-                <Button Click="Reload_Click"
-                        Style="{StaticResource TitleBarButtonStyle}">
-
-                    <FontIcon FontFamily="Segoe Fluent Icons"
-                        Glyph="&#xe72c;"
-                        FontSize="16"/>
+                <Button Click="Reload_Click" Style="{StaticResource TitleBarButtonStyle}">
+                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xe72c;" FontSize="16" ToolTipService.ToolTip="Tải lại trang"/>
                 </Button>
 
                 <ToggleButton x:Name="DarkModeToggle"
-                    Style="{StaticResource TitleBarToggleButtonStyle}"
-                    Checked="DarkMode_Checked"
-                    Unchecked="DarkMode_Unchecked">
+                              Checked="DarkMode_Checked"
+                              Unchecked="DarkMode_Unchecked"
+                              Style="{StaticResource TitleBarToggleButtonStyle}"
+                              ToolTipService.ToolTip="Chuyển đổi giao diện Sáng/Tối">
 
                     <FontIcon x:Name="ThemeIcon"
-                        Glyph="&#xEC8A;"
-                        FontSize="16"
-                        FontFamily="Segoe Fluent Icons"/>
+                              FontSize="16"
+                              Glyph="&#xEC8A;"
+                              FontFamily="Segoe Fluent Icons"/>
                 </ToggleButton>
             </StackPanel>
         </Grid>
 
         <NavigationView x:Name="NavView"
-                        Margin="0,40,0,0"
+                        Margin="0, 40, 0, 0"
                         PaneDisplayMode="Left"
                         IsPaneOpen="False"
                         OpenPaneLength="192"
@@ -76,17 +70,17 @@
             </NavigationView.Resources>
 
             <NavigationView.MenuItems>
-                <NavigationViewItem Content="Messenger" Tag="MessengerPage">
+                <NavigationViewItem x:Name="MessengerTab" Content="Messenger" Tag="MessengerPage">
                     <NavigationViewItem.Icon>
                         <ImageIcon x:Name="MessengerIcon"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Zalo" Tag="ZaloPage">
+                <NavigationViewItem x:Name="ZaloTab" Content="Zalo" Tag="ZaloPage">
                     <NavigationViewItem.Icon>
                         <ImageIcon x:Name="ZaloIcon"/>
                     </NavigationViewItem.Icon>
                 </NavigationViewItem>
-                <NavigationViewItem Content="Teams" Tag="TeamsPage">
+                <NavigationViewItem x:Name="TeamsTab" Content="Teams" Tag="TeamsPage">
                     <NavigationViewItem.Icon>
                         <ImageIcon x:Name="TeamsIcon"/>
                     </NavigationViewItem.Icon>
@@ -97,27 +91,27 @@
                 <pages:MessengerPage x:Name="MessengerPage" Visibility="Collapsed"/>
                 <pages:ZaloPage      x:Name="ZaloPage"      Visibility="Collapsed"/>
                 <pages:TeamsPage     x:Name="TeamsPage"     Visibility="Collapsed"/>
-                <pages:SettingPage   x:Name="SettingPage"  Visibility="Collapsed"/>
+                <pages:SettingPage   x:Name="SettingPage"   Visibility="Collapsed"/>
 
                 <!-- Welcome view — only appears the first time, hides after selecting a tab -->
                 <Grid x:Name="WelcomeView" Visibility="Collapsed">
                     <StackPanel HorizontalAlignment="Center"
-                        VerticalAlignment="Center"
-                        Spacing="16">
+                                VerticalAlignment="Center"
+                                Spacing="16">
 
                         <Image Source="ms-appx:///Assets/logo.png"
-                           Width="80" Height="80"
-                           HorizontalAlignment="Center"/>
+                               Width="80" Height="80"
+                               HorizontalAlignment="Center"/>
 
                         <TextBlock Text="All-in-One Messenger"
-                           FontSize="28"
-                           FontWeight="SemiBold"
-                           HorizontalAlignment="Center"/>
+                                   FontSize="28"
+                                   FontWeight="SemiBold"
+                                   HorizontalAlignment="Center"/>
 
                         <TextBlock Text="Chọn một ứng dụng để bắt đầu"
-                           FontSize="14"
-                           Opacity="0.6"
-                           HorizontalAlignment="Center"/>
+                                   FontSize="14"
+                                   Opacity="0.6"
+                                   HorizontalAlignment="Center"/>
                     </StackPanel>
                 </Grid>
             </Grid>

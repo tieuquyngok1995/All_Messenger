@@ -1,3 +1,4 @@
+using Microsoft.UI.Xaml;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
@@ -18,7 +19,6 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     private string _url = string.Empty;
     private string _iconGlyph = "\uE774"; // Globe
     private bool _isEnabled = true;
-    private bool _isDefault = false;
     public int _order = 0;
 
     /// <summary>
@@ -49,7 +49,7 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Glyph icon from Segoe MDL2 Assets.
+    /// Glyph icon from Segoe Fluent Icons.
     /// </summary>
     public string IconGlyph
     {
@@ -63,14 +63,6 @@ public partial class CustomServerInfo : INotifyPropertyChanged
         set { if (_isEnabled != value) { _isEnabled = value; Notify(); } }
     }
 
-    public bool IsDefault
-    {
-        get => _isDefault;
-        set { if (_isDefault != value) { _isDefault = value; Notify(); } }
-    }
-
-    public bool IsCustom => !IsDefault;
-
     /// <summary>
     /// Arrange the display order of the custom servers.
     /// </summary>
@@ -78,5 +70,22 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     {
         get => _order;
         set { if (_order != value) { _order = value; Notify(); } }
+    }
+
+    public Visibility GetCustomVisibility(string id) => IsDefaultServer(id) ? Visibility.Collapsed : Visibility.Visible;
+
+    public Visibility GetDefaultVisibility(string id) => IsDefaultServer(id) ? Visibility.Visible : Visibility.Collapsed;
+
+    public string GetIconForServer(bool isEnabled) => isEnabled ? "\uE890" : "\uE921";
+
+    private static bool IsDefaultServer(string id)
+    {
+        return id switch
+        {
+            CONST.TabZalo => true,
+            CONST.TabTeams => true,
+            CONST.TabMessenger => true,
+            _ => false
+        };
     }
 }

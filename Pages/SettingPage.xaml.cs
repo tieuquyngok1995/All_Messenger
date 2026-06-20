@@ -8,6 +8,7 @@ using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace All_in_One_Messenger.Pages;
@@ -25,53 +26,53 @@ public sealed partial class SettingPage : Page
     private static readonly (string Label, string Glyph)[] _iconOptions =
     [
         // ── Nhắn tin ──────────────────────────────────
-        ("Quả địa cầu",     "\uE774"),   // Globe
+        ("Globe",           "\uE774"),   // Globe
         ("Chat",            "\uE8BD"),   // Chat bubble
-        ("Tin nhắn",        "\uE715"),   // Message
-        ("Bình luận",       "\uE8F2"),   // Comment
+        ("Message",         "\uE715"),   // Message
+        ("Quick Note",      "\uE70B"),   // Quick Note
         ("Micro",           "\uE720"),   // Microphone — voice channel
-        ("Máy bay",         "\uE709"),   // Airplane
+        ("Airplane",        "\uE709"),   // Airplane
         ("Shop",            "\uE719"),   // Shop
         // ── Giao tiếp ─────────────────────────────────
-        ("Điện thoại",      "\uE717"),   // Phone
+        ("Phone",           "\uE717"),   // Phone
         ("Video call",      "\uE714"),   // Video camera
-        ("Tai nghe",        "\uE95B"),   // Headset — Discord / voice
-        ("Apps",            "\uE71D"),   // Apps
+        ("Headset",         "\uE95B"),   // Headset — Discord / voice
+        ("Work",            "\uE821"),   // Work
         ("Group",           "\uEC26"),   // Send
-        ("Sách",            "\uE736"),   // ReadingMode
+        ("Book",            "\uE736"),   // ReadingMode
         ("OEM",             "\uE74C"),   // OEM
         // ── Cộng đồng ─────────────────────────────────
-        ("Người dùng",      "\uE77B"),   // Person
-        ("Nhóm",            "\uE716"),   // People / group
-        ("Thích",           "\uE899"),   // Like / thumbs up
-        ("Yêu thích",       "\uE734"),   // Heart favorite
-        ("Ngôi sao",        "\uE735"),   // Star (solid)
-        ("Đồng hồ",         "\uF0B4"),   // Audio
-        ("Ethernet",        "\uE839"),   // Ethernet
+        ("Person",          "\uE77B"),   // Person
+        ("System",          "\uE770"),   // System
+        ("Emoji",           "\uE899"),   // Emoji
+        ("Star",            "\uE734"),   // Heart favorite
+        ("Report Document", "\uE9F9"),   // ReportDocument
+        ("Tinder",          "\uECAD"),   // Tinder
+        ("Monitor",         "\uE7F4"),   // Monitor
         // ── Giải trí ──────────────────────────────────
-        ("Trò chơi",        "\uE7FC"),   // Game controller
+        ("Game",            "\uE7FC"),   // Game controller
         ("Camera",          "\uE722"),   // Camera
-        ("Âm nhạc",         "\uE8D6"),   // Music note — music bot servers
-        ("Đám mây",         "\uE753"),   // Cloud
-        ("Cay bút",         "\uEF15"),   // Bell
-        ("Con rùa",         "\uEA79"),   // SlowMotionOn
-        ("Robot",           "\uE99A"),   // Robot
+        ("Music",           "\uE8D6"),   // Music note — music bot servers
+        ("Video",           "\uE714"),   // Video
+        ("Cloud",           "\uE753"),   // Cloud
+        ("Alert",           "\uF6C5"),   // Alert
+        ("Leaf Two",        "\uF1E8"),   // LeafTwo
         // ── Công nghệ ─────────────────────────────────
-        ("Thế giới",        "\uE909"),   // Globe2 / World
-        ("Di động",         "\uE8EA"),   // Mobile phone
-        ("Lập trình",       "\uE8F4"),   // Code / library
-        ("Công việc",       "\uE8A5"),   // Briefcase
-        ("Send",            "\uE725"),   // SendFill
+        ("Connect",         "\uE703"),   // Connect
+        ("Mobile Phone",    "\uE8EA"),   // Mobile phone
+        ("Report Hacked",   "\uE730"),   // ReportHacked
+        ("Magazine",        "\uE8A1"),   // PreviewLink
+        ("Effects",         "\uE794"),   // Effects
         ("Cloud Search",    "\uEDE4"),   // CloudSearch
-        ("Xe ô tô",         "\uEC47"),   // MobDrivingMode
+        ("Gripper Tool",    "\uE75E"),   // GripperTool
         // ── Tiện ích ──────────────────────────────────
-        ("Trái tim",        "\uE95E"),   // Health
-        ("Mặt cười",        "\uEB68"),   // Link
+        ("Health",          "\uE95E"),   // Health
+        ("Face",            "\uEB68"),   // NUIFace
         ("Color",           "\uE790"),   // Color
-        ("Bảo mật",         "\uE72E"),   // Shield / security
-        ("Lịch",            "\uE787"),   // Calendar — event servers
+        ("Lock",            "\uE72E"),   // Lock
+        ("Calendar",        "\uE787"),   // Calendar — event servers
         ("Windows Insider", "\uF1AD"),   // WindowsInsider
-        ("Biểu cảm",        "\uF6B8"),   // ExpressiveInputEntry
+        ("Expressive",      "\uF6B8"),   // ExpressiveInputEntry
      ];
 
     public SettingPage()
@@ -89,40 +90,45 @@ public sealed partial class SettingPage : Page
     private void SettingPage_Loaded(object sender, RoutedEventArgs e)
     {
         _isLoading = true;
+
         var mode = LoadNotificationMode();
         if (mode == NotificationService.NotificationModeSilent)
             RadioSilent.IsChecked = true;
         else
             RadioToast.IsChecked = true;
-        _isLoading = false;
-
-        ElementTheme theme = ((FrameworkElement)Content).ActualTheme;
 
         var servers = AppSettings.GetCustomServers();
-        var existingNames = servers.Select(x => x.Name).ToHashSet();
-        var defaults = new[]
+        if (servers.Count == 0)
         {
-            (Id: CONST.AppIdMessenger, Name: CONST.AppIdMessenger, Url:"https://www.messenger.com/",   IconGlyph:"\uE8BD", Order: 0),
-            (Id: CONST.AppIdZalo,      Name: CONST.AppIdZalo,      Url:"https://chat.zalo.me/",        IconGlyph:"\uec42", Order: 1),
-            (Id: CONST.AppIdTeams,     Name: CONST.AppIdTeams,     Url:"https://teams.microsoft.com/", IconGlyph:"\uE902", Order: 2),
-        };
-
-        CustomServers.Clear();
-        foreach (var (id, name, url, icon, order) in defaults.Where(d => !existingNames.Contains(d.Name)))
-        {
-            CustomServers.Add(new CustomServerInfo
+            var defaults = new[]
             {
-                Id = id,
-                Name = name,
-                Url = url,
-                IconGlyph = icon,
-                Order = order,
-                IsEnable = true
-            });
+                (Id: CONST.TabMessenger, Name: CONST.AppIdMessenger, Url:"https://www.messenger.com/",   IconGlyph:"\uE8BD", Order: 0),
+                (Id: CONST.TabZalo,      Name: CONST.AppIdZalo,      Url:"https://chat.zalo.me/",        IconGlyph:"\uec42", Order: 1),
+                (Id: CONST.TabTeams,     Name: CONST.AppIdTeams,     Url:"https://teams.microsoft.com/", IconGlyph:"\uE902", Order: 2),
+            };
+
+            foreach (var (id, name, url, icon, order) in defaults)
+            {
+                servers.Add(new CustomServerInfo
+                {
+                    Id = id,
+                    Name = name,
+                    Url = url,
+                    IconGlyph = icon,
+                    Order = order,
+                    IsEnable = true
+                });
+            }
+            AppSettings.SaveCustomServers(servers);
         }
 
+        CustomServers.Clear();
         foreach (var server in servers)
             CustomServers.Add(server);
+
+        var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        VersionText.Text = $"Phiên bản hiện tại: {version?.Split('+')[0] ?? "Unknown"}";
+        _isLoading = false;
     }
 
     /// <summary>
@@ -151,7 +157,6 @@ public sealed partial class SettingPage : Page
         if (result is null) return;
 
         var (name, url, glyph) = result.Value;
-
 
         var servers = AppSettings.GetCustomServers();
         var info = new CustomServerInfo { Name = name, Url = url, IconGlyph = glyph, Order = servers.Count };
@@ -200,7 +205,26 @@ public sealed partial class SettingPage : Page
         App.MainWindow?.UpdateCustomServerTab(id, name, glyph, url);
     }
 
-    private void HiddenServer_Click(object sender, RoutedEventArgs e) { }
+    /// <summary>
+    /// Event: Show and hidden server
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private void HiddenServerToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton btn || btn.Tag is not string id) return;
+        if (btn is null) return;
+
+        // Persist
+        var servers = AppSettings.GetCustomServers();
+        var saved = servers.FirstOrDefault(s => s.Id == id);
+
+        if (btn.IsChecked == true && saved is not null) saved.IsEnable = true;
+        if (btn.IsChecked == false && saved is not null) saved.IsEnable = false;
+
+        AppSettings.SaveCustomServers(servers);
+        OnServersReordered?.Invoke(this, EventArgs.Empty);
+    }
 
     /// <summary>
     /// Event: Delete custom server
@@ -222,6 +246,11 @@ public sealed partial class SettingPage : Page
         AppSettings.SaveCustomServers(servers);
 
         App.MainWindow?.RemoveCustomServerTab(id);
+    }
+
+    private void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+
     }
 
     /// <summary>
