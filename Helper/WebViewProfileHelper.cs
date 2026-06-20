@@ -45,6 +45,7 @@ public static class WebViewProfileHelper
 
             var options = new CoreWebView2EnvironmentOptions
             {
+                Language = "en-US",
                 AdditionalBrowserArguments = string.Join(" ",
                 [
                     "--disable-features=msSmartScreen",

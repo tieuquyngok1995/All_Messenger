@@ -2,11 +2,22 @@
 
 public static class CONST
 {
+    // ── Theme ────────────────────────────────────────────────────────────────
+    public const string ThemeKey = "AppTheme";
+    public const string ThemeDark = "Dark";
+    public const string ThemeLight = "Light";
+    public const string ThemeSystem = "System";
+
     // ── App IDs ──────────────────────────────────────────────────────────────
     public const string AppIdZalo = "Zalo";
     public const string AppIdTeams = "Teams";
     public const string AppIdMessenger = "Messenger";
 
+    // ── Tab tags (must match NavigationViewItem.Tag in XAML) ─────────────────
+    public const string TabZalo = "ZaloPage";
+    public const string TabTeams = "TeamsPage";
+    public const string TabMessenger = "MessengerPage";
+    public const string TabSettings = "SettingPage";
 
     // ── Assets ───────────────────────────────────────────────────────────────
     public const string AssetMessengerLight = "ms-appx:///Assets/messenger_light.png";

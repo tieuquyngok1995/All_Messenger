@@ -1,6 +1,7 @@
 ﻿using All_in_One_Messenger.Helper;
 using All_in_One_Messenger.Services;
 using Microsoft.UI.Xaml;
+using Microsoft.Windows.Globalization;
 using System;
 using System.Threading.Tasks;
 
@@ -19,7 +20,11 @@ public partial class App : Application
     /// </summary>
     public App()
     {
-        try { InitializeComponent(); }
+        try
+        {
+            ApplicationLanguages.PrimaryLanguageOverride = "en-US";
+            InitializeComponent();
+        }
         catch (Exception ex)
         {
             AppLogger.Log($"[App] InitializeComponent error: {ex.Message}", ex);
