@@ -110,7 +110,7 @@
                                             BorderBrush="{ThemeResource SurfaceStrokeColorFlyoutBrush}"
                                             VerticalAlignment="Center">
                                         <FontIcon Glyph="{x:Bind IconGlyph, Mode=OneWay}"
-                                                  FontFamily="Segoe MDL2 Assets"
+                                                  FontFamily="Segoe Fluent Icons"
                                                   FontSize="16"
                                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                                   HorizontalAlignment="Center"
@@ -138,8 +138,8 @@
                                                 Click="EditServer_Click"
                                                 Style="{ThemeResource SubtleButtonStyle}"
                                                 ToolTipService.ToolTip="Chỉnh sửa server"
-                                                Visibility="{x:Bind IsCustom}">
-                                            <FontIcon FontFamily="Segoe MDL2 Assets"
+                                                Visibility="{x:Bind GetCustomVisibility(Id)}">
+                                            <FontIcon FontFamily="Segoe Fluent Icons"
                                                       Glyph="&#xE70F;"
                                                       FontSize="14"
                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
@@ -149,20 +149,20 @@
                                                 Click="DeleteServer_Click"
                                                 Style="{ThemeResource SubtleButtonStyle}"
                                                 ToolTipService.ToolTip="Xóa server"
-                                                Visibility="{x:Bind IsCustom}">
-                                            <FontIcon FontFamily="Segoe MDL2 Assets"
+                                                Visibility="{x:Bind GetCustomVisibility(Id)}">
+                                            <FontIcon FontFamily="Segoe Fluent Icons"
                                                       Glyph="&#xE74D;"
                                                       FontSize="14"
                                                       Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
                                         </Button>
                                         <Button Tag="{x:Bind Id}"
                                             Height="36"
-                                            Click="Hidden_Click"
+                                            Click="HiddenServer_Click"
                                             Style="{ThemeResource SubtleButtonStyle}"
                                             ToolTipService.ToolTip="Ẩn server"
-                                            Visibility="{x:Bind IsDefault}">
-                                                                                <FontIcon FontFamily="Segoe MDL2 Assets"
-                                                  Glyph="&#xE74D;"
+                                            Visibility="{x:Bind GetDefaultVisibility(Id)}">
+                                            <FontIcon FontFamily="Segoe Fluent Icons"
+                                                  Glyph="&#xE890;"
                                                   FontSize="14"
                                                   Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
                                         </Button>
@@ -178,7 +178,7 @@
                             Style="{ThemeResource DefaultButtonStyle}"
                             HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon FontFamily="Segoe MDL2 Assets"
+                            <FontIcon FontFamily="Segoe Fluent Icons"
                                       Glyph="&#xE710;"
                                       FontSize="14"/>
                             <TextBlock Text="Thêm server"/>

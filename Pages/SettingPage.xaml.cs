@@ -21,7 +21,7 @@ public sealed partial class SettingPage : Page
 
     public event EventHandler? OnServersReordered;
 
-    // 42 icons (6 × 7) from Segoe MDL2 Assets, prioritizing icons suitable for the chat server.
+    // 42 icons (6 × 7) from Segoe Fluent Icons, prioritizing icons suitable for the chat server.
     private static readonly (string Label, string Glyph)[] _iconOptions =
     [
         // ── Nhắn tin ──────────────────────────────────
@@ -102,22 +102,22 @@ public sealed partial class SettingPage : Page
         var existingNames = servers.Select(x => x.Name).ToHashSet();
         var defaults = new[]
         {
-            (Name: CONST.AppIdMessenger, Url:"https://www.messenger.com/",   IconGlyph:"\uE8BD", Order: 0),
-            (Name: CONST.AppIdZalo,      Url:"https://chat.zalo.me/",        IconGlyph:"\uE91C", Order: 1),
-            (Name: CONST.AppIdTeams,     Url:"https://teams.microsoft.com/", IconGlyph:"\uE902", Order: 2),
+            (Id: CONST.AppIdMessenger, Name: CONST.AppIdMessenger, Url:"https://www.messenger.com/",   IconGlyph:"\uE8BD", Order: 0),
+            (Id: CONST.AppIdZalo,      Name: CONST.AppIdZalo,      Url:"https://chat.zalo.me/",        IconGlyph:"\uec42", Order: 1),
+            (Id: CONST.AppIdTeams,     Name: CONST.AppIdTeams,     Url:"https://teams.microsoft.com/", IconGlyph:"\uE902", Order: 2),
         };
 
         CustomServers.Clear();
-        foreach (var (name, url, icon, order) in defaults.Where(d => !existingNames.Contains(d.Name)))
+        foreach (var (id, name, url, icon, order) in defaults.Where(d => !existingNames.Contains(d.Name)))
         {
             CustomServers.Add(new CustomServerInfo
             {
+                Id = id,
                 Name = name,
                 Url = url,
                 IconGlyph = icon,
                 Order = order,
-                IsEnable = true,
-                IsDefault = true
+                IsEnable = true
             });
         }
 
@@ -199,6 +199,8 @@ public sealed partial class SettingPage : Page
 
         App.MainWindow?.UpdateCustomServerTab(id, name, glyph, url);
     }
+
+    private void HiddenServer_Click(object sender, RoutedEventArgs e) { }
 
     /// <summary>
     /// Event: Delete custom server
@@ -378,7 +380,7 @@ public sealed partial class SettingPage : Page
             tb.Content = new FontIcon
             {
                 Glyph = g,
-                FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                FontFamily = new FontFamily("Segoe Fluent Icons"),
                 FontSize = 18
             };
 

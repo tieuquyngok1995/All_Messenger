@@ -30,7 +30,6 @@
 
                 <TextBlock Text="All-in-One Messenger"
                     VerticalAlignment="Center"/>
-
             </StackPanel>
 
             <!-- RIGHT BUTTONS -->
@@ -42,10 +41,9 @@
                 <Button Click="Reload_Click"
                         Style="{StaticResource TitleBarButtonStyle}">
 
-                    <FontIcon FontFamily="Segoe MDL2 Assets"
-                        Glyph="&#xE72C;"
+                    <FontIcon FontFamily="Segoe Fluent Icons"
+                        Glyph="&#xe72c;"
                         FontSize="16"/>
-
                 </Button>
 
                 <ToggleButton x:Name="DarkModeToggle"
@@ -54,10 +52,9 @@
                     Unchecked="DarkMode_Unchecked">
 
                     <FontIcon x:Name="ThemeIcon"
-                        Glyph="&#xE706;"
+                        Glyph="&#xEC8A;"
                         FontSize="16"
-                        FontFamily="Segoe MDL2 Assets"/>
-
+                        FontFamily="Segoe Fluent Icons"/>
                 </ToggleButton>
             </StackPanel>
         </Grid>
@@ -152,7 +149,6 @@
                            FontSize="13"
                            Opacity="0.6"
                            HorizontalAlignment="Center"/>
-
             </StackPanel>
         </Grid>
 

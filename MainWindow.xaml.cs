@@ -32,10 +32,8 @@ public sealed partial class MainWindow : Window
     private const string ThemeSystem = "System";
 
     // ── Glyph ────────────────────────────────────────────────────────────────
-    private const string GlyphMoon = "\uE708";
-    private const string GlyphSun = "\uF08C";
-    private const string GlyphSunAlt = "\uE706";
-    private const string GlyphMoonAlt = "\uF0CE";
+    private const string GlyphDark = "\uF0CE";
+    private const string Glyphlight = "\uEC8A";
 
     // ── Tab tags (must match NavigationViewItem.Tag in XAML) ─────────────────
     private const string TabZalo = "ZaloPage";
@@ -315,7 +313,7 @@ public sealed partial class MainWindow : Window
             Icon = new FontIcon
             {
                 Glyph = info.IconGlyph,
-                FontFamily = new FontFamily("Segoe MDL2 Assets")
+                FontFamily = new FontFamily("Segoe Fluent Icons")
             }
         };
         NavView.MenuItems.Add(navItem);
@@ -530,7 +528,7 @@ public sealed partial class MainWindow : Window
                 Tag = server.Id,
                 Icon = new FontIcon
                 {
-                    FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                    FontFamily = new FontFamily("Segoe Fluent Icons"),
                     Glyph = server.IconGlyph
                 }
             };
@@ -561,13 +559,13 @@ public sealed partial class MainWindow : Window
             case ThemeDark:
                 DarkModeToggle.IsChecked = true;
                 ((FrameworkElement)Content).RequestedTheme = ElementTheme.Dark;
-                ThemeIcon.Glyph = GlyphMoon;
+                ThemeIcon.Glyph = Glyphlight;
                 ApplyTitleBarTheme(true);
                 break;
 
             case ThemeLight:
                 ((FrameworkElement)Content).RequestedTheme = ElementTheme.Light;
-                ThemeIcon.Glyph = GlyphSunAlt;
+                ThemeIcon.Glyph = GlyphDark;
                 ApplyTitleBarTheme(false);
                 break;
 
@@ -580,7 +578,7 @@ public sealed partial class MainWindow : Window
 
     private void DarkMode_Checked(object sender, RoutedEventArgs e)
     {
-        ThemeIcon.Glyph = GlyphMoonAlt;
+        ThemeIcon.Glyph = Glyphlight;
         ((FrameworkElement)Content).RequestedTheme = ElementTheme.Dark;
         SaveTheme(ThemeDark);
         UpdateIcons();
@@ -589,7 +587,7 @@ public sealed partial class MainWindow : Window
 
     private void DarkMode_Unchecked(object sender, RoutedEventArgs e)
     {
-        ThemeIcon.Glyph = GlyphSun;
+        ThemeIcon.Glyph = GlyphDark;
         ((FrameworkElement)Content).RequestedTheme = ElementTheme.Light;
         SaveTheme(ThemeLight);
         UpdateIcons();
