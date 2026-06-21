@@ -1,4 +1,5 @@
 using All_in_One_Messenger.Helper;
+using All_in_One_Messenger.Models;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Media;
@@ -152,7 +153,7 @@ public sealed partial class CustomServerPage : WebViewPageBase
         content.Children.Add(new FontIcon
         {
             Glyph = "\uE814",           // WiFiWarning / no connection
-            FontFamily = new FontFamily("Segoe MDL2 Assets"),
+            FontFamily = new FontFamily("Segoe Fluent Icons"),
             FontSize = 48,
             HorizontalAlignment = HorizontalAlignment.Center,
             Opacity = 0.6

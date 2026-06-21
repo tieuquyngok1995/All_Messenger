@@ -1,8 +1,10 @@
+using All_in_One_Messenger.Helper;
+using Microsoft.UI.Xaml;
 using System;
 using System.ComponentModel;
 using System.Runtime.CompilerServices;
 
-namespace All_in_One_Messenger.Helper;
+namespace All_in_One_Messenger.Models;
 
 /// <summary>
 /// Information about a custom chat server added by the user.
@@ -17,6 +19,7 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     private string _name = string.Empty;
     private string _url = string.Empty;
     private string _iconGlyph = "\uE774"; // Globe
+    private bool _isEnabled = true;
     public int _order = 0;
 
     /// <summary>
@@ -47,12 +50,18 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Glyph icon from Segoe MDL2 Assets.
+    /// Glyph icon from Segoe Fluent Icons.
     /// </summary>
     public string IconGlyph
     {
         get => _iconGlyph;
         set { if (_iconGlyph != value) { _iconGlyph = value; Notify(); } }
+    }
+
+    public bool IsEnable
+    {
+        get => _isEnabled;
+        set { if (_isEnabled != value) { _isEnabled = value; Notify(); } }
     }
 
     /// <summary>
@@ -62,5 +71,22 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     {
         get => _order;
         set { if (_order != value) { _order = value; Notify(); } }
+    }
+
+    public Visibility GetCustomVisibility(string id) => IsDefaultServer(id) ? Visibility.Collapsed : Visibility.Visible;
+
+    public Visibility GetDefaultVisibility(string id) => IsDefaultServer(id) ? Visibility.Visible : Visibility.Collapsed;
+
+    public string GetIconForServer(bool isEnabled) => isEnabled ? "\uE890" : "\uE921";
+
+    private static bool IsDefaultServer(string id)
+    {
+        return id switch
+        {
+            AppConst.TabZalo => true,
+            AppConst.TabTeams => true,
+            AppConst.TabMessenger => true,
+            _ => false
+        };
     }
 }

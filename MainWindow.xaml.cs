@@ -1,4 +1,5 @@
 ﻿using All_in_One_Messenger.Helper;
+using All_in_One_Messenger.Models;
 using All_in_One_Messenger.Pages;
 using All_in_One_Messenger.Services;
 using Microsoft.UI;
@@ -25,37 +26,11 @@ public sealed partial class MainWindow : Window
 {
     private readonly AppWindow _appWindow;
 
-    // ── Theme ────────────────────────────────────────────────────────────────
-    private const string ThemeKey = "AppTheme";
-    private const string ThemeDark = "Dark";
-    private const string ThemeLight = "Light";
-    private const string ThemeSystem = "System";
-
     // ── Glyph ────────────────────────────────────────────────────────────────
-    private const string GlyphMoon = "\uE708";
-    private const string GlyphSun = "\uF08C";
-    private const string GlyphSunAlt = "\uE706";
-    private const string GlyphMoonAlt = "\uF0CE";
-
-    // ── Tab tags (must match NavigationViewItem.Tag in XAML) ─────────────────
-    private const string TabZalo = "ZaloPage";
-    private const string TabTeams = "TeamsPage";
-    private const string TabMessenger = "MessengerPage";
-    private const string TabSettings = "SettingPage";
-
-    // ── App IDs ──────────────────────────────────────────────────────────────
-    private const string AppIdZalo = "Zalo";
-    private const string AppIdTeams = "Teams";
-    private const string AppIdMessenger = "Messenger";
+    private const string GlyphDark = "\uF0CE";
+    private const string Glyphlight = "\uEC8A";
 
     // ── Assets ───────────────────────────────────────────────────────────────
-    private const string AssetMessengerLight = "ms-appx:///Assets/messenger_light.png";
-    private const string AssetMessengerDark = "ms-appx:///Assets/messenger_dark.png";
-    private const string AssetZaloLight = "ms-appx:///Assets/zalo_light.png";
-    private const string AssetZaloDark = "ms-appx:///Assets/zalo_dark.png";
-    private const string AssetTeamsLight = "ms-appx:///Assets/teams_light.png";
-    private const string AssetTeamsDark = "ms-appx:///Assets/teams_dark.png";
-
     private readonly BitmapImage _messengerLight;
     private readonly BitmapImage _messengerDark;
     private readonly BitmapImage _zaloLight;
@@ -63,7 +38,7 @@ public sealed partial class MainWindow : Window
     private readonly BitmapImage _teamsLight;
     private readonly BitmapImage _teamsDark;
 
-    private readonly Dictionary<string, (FrameworkElement Page, string AppId)> _tabs = null!;
+    private readonly Dictionary<string, (FrameworkElement Page, string AppId, NavigationViewItem MenuItem)> _tabs = null!;
     private readonly Dictionary<string, CustomServerPage> _customPages = [];
 
     private bool _isTabHeld = false;
@@ -74,30 +49,42 @@ public sealed partial class MainWindow : Window
         InitializeComponent();
 
         // InitializeAssets
-        _messengerLight = new(new Uri(AssetMessengerLight));
-        _messengerDark = new(new Uri(AssetMessengerDark));
-        _zaloLight = new(new Uri(AssetZaloLight));
-        _zaloDark = new(new Uri(AssetZaloDark));
-        _teamsLight = new(new Uri(AssetTeamsLight));
-        _teamsDark = new(new Uri(AssetTeamsDark));
+        _messengerLight = new(new Uri(AppConst.AssetMessengerLight));
+        _messengerDark = new(new Uri(AppConst.AssetMessengerDark));
+        _zaloLight = new(new Uri(AppConst.AssetZaloLight));
+        _zaloDark = new(new Uri(AppConst.AssetZaloDark));
+        _teamsLight = new(new Uri(AppConst.AssetTeamsLight));
+        _teamsDark = new(new Uri(AppConst.AssetTeamsDark));
 
         // InitializeTabs
         _tabs = new()
         {
-            [TabTeams] = (TeamsPage, AppIdTeams),
-            [TabMessenger] = (MessengerPage, AppIdMessenger),
-            [TabZalo] = (ZaloPage, AppIdZalo),
-            [TabSettings] = (SettingPage, string.Empty),
+            [AppConst.TabZalo] = (ZaloPage, AppConst.AppIdZalo, ZaloTab),
+            [AppConst.TabTeams] = (TeamsPage, AppConst.AppIdTeams, TeamsTab),
+            [AppConst.TabMessenger] = (MessengerPage, AppConst.AppIdMessenger, MessengerTab),
+            [AppConst.TabSettings] = (SettingPage, string.Empty, null!),
         };
 
         // Load saved custom servers
-        var servers = AppSettings.GetCustomServers().ToList();
+        var servers = AppSettings.GetCustomServers().OrderBy(s => s.Order).ToList();
         foreach (var server in servers)
-            AddCustomServerTab(server);
+        {
+            if (server.Name.Equals(AppConst.AppIdZalo) || server.Name.Equals(AppConst.AppIdTeams) || server.Name.Equals(AppConst.AppIdMessenger))
+            {
+                var tab = _tabs.FirstOrDefault(x => x.Value.AppId == server.Name).Value;
+                if (tab.MenuItem == null) continue;
+
+                tab.MenuItem.Visibility = server.IsEnable ? Visibility.Visible : Visibility.Collapsed;
+                NavView.MenuItems.Remove(tab.MenuItem);
+                NavView.MenuItems.Add(tab.MenuItem);
+            }
+            else
+                AddCustomServerTab(server);
+        }
 
         WebViewProfileHelper.CleanupUnusedProfiles(
             servers.Select(s => s.Id),
-            exclude: [AppIdTeams, AppIdMessenger, AppIdZalo]
+            exclude: [AppConst.AppIdTeams, AppConst.AppIdMessenger, AppConst.AppIdZalo]
         );
 
         // InitializeWindow
@@ -142,9 +129,9 @@ public sealed partial class MainWindow : Window
         var deadline = DateTime.UtcNow.AddSeconds(20);
         while (DateTime.UtcNow < deadline)
         {
-            var (_, messenger) = GetWebViewInfo(AppIdMessenger);
-            var (_, teams) = GetWebViewInfo(AppIdTeams);
-            var (_, zalo) = GetWebViewInfo(AppIdZalo);
+            var (_, messenger) = GetWebViewInfo(AppConst.AppIdMessenger);
+            var (_, teams) = GetWebViewInfo(AppConst.AppIdTeams);
+            var (_, zalo) = GetWebViewInfo(AppConst.AppIdZalo);
             if (messenger && teams && zalo) break;
             await Task.Delay(100);
         }
@@ -187,6 +174,7 @@ public sealed partial class MainWindow : Window
     {
         var menuItems = NavView.MenuItems
             .OfType<NavigationViewItem>()
+            .Where(i => i.Visibility == Visibility.Visible)
             .ToList();
 
         for (int i = 0; i < menuItems.Count; i++)
@@ -205,9 +193,9 @@ public sealed partial class MainWindow : Window
     /// <returns></returns>
     private (WebView2? WebView, bool IsReady) GetWebViewInfo(string appId) => appId switch
     {
-        AppIdZalo => (ZaloPage.WebView, ZaloPage.IsReady),
-        AppIdTeams => (TeamsPage.WebView, TeamsPage.IsReady),
-        AppIdMessenger => (MessengerPage.WebView, MessengerPage.IsReady),
+        AppConst.AppIdZalo => (ZaloPage.WebView, ZaloPage.IsReady),
+        AppConst.AppIdTeams => (TeamsPage.WebView, TeamsPage.IsReady),
+        AppConst.AppIdMessenger => (MessengerPage.WebView, MessengerPage.IsReady),
         _ => _customPages.TryGetValue(appId, out var p) ? (p.WebView, p.IsReady) : (null, false)
     };
     #endregion
@@ -251,7 +239,7 @@ public sealed partial class MainWindow : Window
 
         if (!_isTabHeld) return;
 
-        var menuItems = NavView.MenuItems.OfType<NavigationViewItem>().ToList();
+        var menuItems = NavView.MenuItems.OfType<NavigationViewItem>().Where(i => i.Visibility == Visibility.Visible).ToList();
         int currentIndex = NavView.SelectedItem is NavigationViewItem selectedItem ? menuItems.IndexOf(selectedItem) : -1;
 
         switch (e.Key)
@@ -279,7 +267,7 @@ public sealed partial class MainWindow : Window
 
     private void HandleShortcut(WebViewKeyCombo combo)
     {
-        var menuItems = NavView.MenuItems.OfType<NavigationViewItem>().ToList();
+        var menuItems = NavView.MenuItems.OfType<NavigationViewItem>().Where(i => i.Visibility == Visibility.Visible).ToList();
         int currentIndex = NavView.SelectedItem is NavigationViewItem selectedItem ? menuItems.IndexOf(selectedItem) : -1;
         if (menuItems.Count == 0) return;
 
@@ -327,14 +315,14 @@ public sealed partial class MainWindow : Window
             Icon = new FontIcon
             {
                 Glyph = info.IconGlyph,
-                FontFamily = new FontFamily("Segoe MDL2 Assets")
+                FontFamily = new FontFamily("Segoe Fluent Icons")
             }
         };
         NavView.MenuItems.Add(navItem);
         UpdateNavItemTooltips();
 
         _customPages[info.Id] = page;
-        _tabs[info.Id] = (page, info.Id);
+        _tabs[info.Id] = (page, info.Id, null!);
     }
 
     internal void RemoveCustomServerTab(string id)
@@ -363,15 +351,6 @@ public sealed partial class MainWindow : Window
         _customPages.Remove(id);
     }
 
-    internal void UpdateCustomServerTabIcon(string id, string glyph)
-    {
-        var navItem = NavView.MenuItems
-            .OfType<NavigationViewItem>()
-            .FirstOrDefault(i => i.Tag?.ToString() == id);
-        if (navItem?.Icon is FontIcon fi)
-            fi.Glyph = glyph;
-    }
-
     internal void UpdateCustomServerTab(string id, string name, string glyph, string url)
     {
         var navItem = NavView.MenuItems
@@ -391,7 +370,7 @@ public sealed partial class MainWindow : Window
     internal async void NavigateToSettings()
     {
         NavView.SelectedItem = NavView.SettingsItem;
-        await SwitchTab(TabSettings);
+        await SwitchTab(AppConst.TabSettings);
     }
 
     internal async void NavigateToTab(string appId)
@@ -413,8 +392,8 @@ public sealed partial class MainWindow : Window
     {
         if (args.IsSettingsSelected)
         {
-            if (_activeTab == TabSettings) return;
-            await SwitchTab(TabSettings);
+            if (_activeTab == AppConst.TabSettings) return;
+            await SwitchTab(AppConst.TabSettings);
             return;
         }
 
@@ -432,8 +411,7 @@ public sealed partial class MainWindow : Window
             WelcomeView.Visibility = Visibility.Collapsed;
 
         var suspendTasks = new List<Task>();
-
-        foreach (var (tag, (element, appId)) in _tabs)
+        foreach (var (tag, (element, appId, _)) in _tabs)
         {
             if (tag == page)
             {
@@ -519,34 +497,32 @@ public sealed partial class MainWindow : Window
     /// </summary>
     private void RebuildCustomNavItems()
     {
-        // Get the list of reordered servers from SettingPage
+        var fixedTags = new HashSet<string> { "MessengerPage", "ZaloPage", "TeamsPage" };
         var servers = SettingPage.CustomServers.ToList();
 
-        // Delete old custom items (keep Messenger, Zalo, and Teams as they are)
-        var fixedTags = new HashSet<string> { "MessengerPage", "ZaloPage", "TeamsPage" };
+        // Delete old custom item + hide/show 3 default tabs based on IsEnable, in one iteration
+        var fixedItems = NavView.MenuItems.OfType<NavigationViewItem>()
+            .Where(i => fixedTags.Contains(i.Tag?.ToString() ?? string.Empty))
+            .ToDictionary(i => i.Tag?.ToString() ?? String.Empty, i => i);
 
-        var toRemove = NavView.MenuItems
-            .OfType<NavigationViewItem>()
-            .Where(i => !fixedTags.Contains(i.Tag?.ToString() ?? string.Empty))
-            .ToList();
-
-        foreach (var item in toRemove)
-            NavView.MenuItems.Remove(item);
-
-        // Add them back in the new order
-        foreach (var server in servers.OrderBy(s => s.Order))
+        NavView.MenuItems.Clear();
+        foreach (var s in servers.OrderBy(s => s.Order))
         {
+            if (fixedItems.TryGetValue(s.Id, out var fixedItem))
+            {
+                fixedItem.Visibility = s.IsEnable ? Visibility.Visible : Visibility.Collapsed;
+                NavView.MenuItems.Add(fixedItem);
+                continue;
+            }
+
             var navItem = new NavigationViewItem
             {
-                Content = server.Name,
-                Tag = server.Id,
-                Icon = new FontIcon
-                {
-                    FontFamily = new FontFamily("Segoe MDL2 Assets"),
-                    Glyph = server.IconGlyph
-                }
+                Content = s.Name,
+                Tag = s.Id,
+                Visibility = s.IsEnable ? Visibility.Visible : Visibility.Collapsed,
+                Icon = new FontIcon { FontFamily = new FontFamily("Segoe Fluent Icons"), Glyph = s.IconGlyph }
             };
-            ToolTipService.SetToolTip(navItem, server.Name);
+            ToolTipService.SetToolTip(navItem, s.Name);
             NavView.MenuItems.Add(navItem);
         }
 
@@ -558,28 +534,28 @@ public sealed partial class MainWindow : Window
     #region Theme
     private static void SaveTheme(string theme)
     {
-        AppSettings.Set(ThemeKey, theme);
+        AppSettings.Set(AppConst.ThemeKey, theme);
     }
 
     private static string LoadTheme()
     {
-        return AppSettings.Get(ThemeKey) ?? ThemeSystem;
+        return AppSettings.Get(AppConst.ThemeKey) ?? AppConst.ThemeSystem;
     }
 
     private void ApplyTheme(string theme)
     {
         switch (theme)
         {
-            case ThemeDark:
+            case AppConst.ThemeDark:
                 DarkModeToggle.IsChecked = true;
                 ((FrameworkElement)Content).RequestedTheme = ElementTheme.Dark;
-                ThemeIcon.Glyph = GlyphMoon;
+                ThemeIcon.Glyph = Glyphlight;
                 ApplyTitleBarTheme(true);
                 break;
 
-            case ThemeLight:
+            case AppConst.ThemeLight:
                 ((FrameworkElement)Content).RequestedTheme = ElementTheme.Light;
-                ThemeIcon.Glyph = GlyphSunAlt;
+                ThemeIcon.Glyph = GlyphDark;
                 ApplyTitleBarTheme(false);
                 break;
 
@@ -592,18 +568,18 @@ public sealed partial class MainWindow : Window
 
     private void DarkMode_Checked(object sender, RoutedEventArgs e)
     {
-        ThemeIcon.Glyph = GlyphMoonAlt;
+        ThemeIcon.Glyph = Glyphlight;
         ((FrameworkElement)Content).RequestedTheme = ElementTheme.Dark;
-        SaveTheme(ThemeDark);
+        SaveTheme(AppConst.ThemeDark);
         UpdateIcons();
         ApplyTitleBarTheme(true);
     }
 
     private void DarkMode_Unchecked(object sender, RoutedEventArgs e)
     {
-        ThemeIcon.Glyph = GlyphSun;
+        ThemeIcon.Glyph = GlyphDark;
         ((FrameworkElement)Content).RequestedTheme = ElementTheme.Light;
-        SaveTheme(ThemeLight);
+        SaveTheme(AppConst.ThemeLight);
         UpdateIcons();
         ApplyTitleBarTheme(false);
     }

@@ -1,4 +1,5 @@
 using All_in_One_Messenger.Helper;
+using All_in_One_Messenger.Models;
 using All_in_One_Messenger.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
@@ -7,71 +8,74 @@ using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
+using System.Reflection;
 using System.Threading.Tasks;
 
 namespace All_in_One_Messenger.Pages;
 
 public sealed partial class SettingPage : Page
 {
-    private bool _isLoading;
-
+    public event EventHandler? OnServersReordered;
     // Custom server list — bound to ListView in XAML.
     public ObservableCollection<CustomServerInfo> CustomServers { get; } = [];
 
-    public event EventHandler? OnServersReordered;
+    private bool _isLoading;
+    private readonly UpdateService _updateService = new();
 
-    // 42 icons (6 × 7) from Segoe MDL2 Assets, prioritizing icons suitable for the chat server.
+    // 42 icons (6 × 7) from Segoe Fluent Icons, prioritizing icons suitable for the chat server.
     private static readonly (string Label, string Glyph)[] _iconOptions =
     [
         // ── Nhắn tin ──────────────────────────────────
-        ("Quả địa cầu",     "\uE774"),   // Globe
+        ("Globe",           "\uE774"),   // Globe
         ("Chat",            "\uE8BD"),   // Chat bubble
-        ("Tin nhắn",        "\uE715"),   // Message
-        ("Bình luận",       "\uE8F2"),   // Comment
+        ("Message",         "\uE715"),   // Message
+        ("Quick Note",      "\uE70B"),   // Quick Note
         ("Micro",           "\uE720"),   // Microphone — voice channel
-        ("Máy bay",         "\uE709"),   // Airplane
+        ("Airplane",        "\uE709"),   // Airplane
         ("Shop",            "\uE719"),   // Shop
         // ── Giao tiếp ─────────────────────────────────
-        ("Điện thoại",      "\uE717"),   // Phone
+        ("Phone",           "\uE717"),   // Phone
         ("Video call",      "\uE714"),   // Video camera
-        ("Tai nghe",        "\uE95B"),   // Headset — Discord / voice
-        ("Email",           "\uE8A0"),   // Mail
-        ("Gửi",             "\uE8C8"),   // Send
-        ("Sách",            "\uE736"),   // ReadingMode
+        ("Headset",         "\uE95B"),   // Headset — Discord / voice
+        ("Work",            "\uE821"),   // Work
+        ("Group",           "\uEC26"),   // Send
+        ("Book",            "\uE736"),   // ReadingMode
         ("OEM",             "\uE74C"),   // OEM
         // ── Cộng đồng ─────────────────────────────────
-        ("Người dùng",      "\uE77B"),   // Person
-        ("Nhóm",            "\uE716"),   // People / group
-        ("Thích",           "\uE899"),   // Like / thumbs up
-        ("Yêu thích",       "\uE734"),   // Heart favorite
-        ("Ngôi sao",        "\uE735"),   // Star (solid)
-        ("Audio",           "\uE8D6"),   // Audio
-        ("Ethernet",        "\uE839"),   // Ethernet
+        ("Person",          "\uE77B"),   // Person
+        ("System",          "\uE770"),   // System
+        ("Emoji",           "\uE899"),   // Emoji
+        ("Star",            "\uE734"),   // Heart favorite
+        ("Report Document", "\uE9F9"),   // ReportDocument
+        ("Tinder",          "\uECAD"),   // Tinder
+        ("Monitor",         "\uE7F4"),   // Monitor
         // ── Giải trí ──────────────────────────────────
-        ("Trò chơi",        "\uE7FC"),   // Game controller
+        ("Game",            "\uE7FC"),   // Game controller
         ("Camera",          "\uE722"),   // Camera
-        ("Âm nhạc",         "\uE8D6"),   // Music note — music bot servers
-        ("Đám mây",         "\uE753"),   // Cloud
-        ("Thông báo",       "\uE7A7"),   // Bell
-        ("Con rùa",         "\uEA79"),   // SlowMotionOn
-        ("Robot",           "\uE99A"),   // Robot
+        ("Music",           "\uE8D6"),   // Music note — music bot servers
+        ("Video",           "\uE714"),   // Video
+        ("Cloud",           "\uE753"),   // Cloud
+        ("Alert",           "\uF6C5"),   // Alert
+        ("Leaf Two",        "\uF1E8"),   // LeafTwo
         // ── Công nghệ ─────────────────────────────────
-        ("Thế giới",        "\uE909"),   // Globe2 / World
-        ("Di động",         "\uE8EA"),   // Mobile phone
-        ("Lập trình",       "\uE8F4"),   // Code / library
-        ("Công việc",       "\uE8A5"),   // Briefcase
-        ("Send",            "\uE725"),   // SendFill
+        ("Connect",         "\uE703"),   // Connect
+        ("Mobile Phone",    "\uE8EA"),   // Mobile phone
+        ("Report Hacked",   "\uE730"),   // ReportHacked
+        ("Magazine",        "\uE8A1"),   // PreviewLink
+        ("Effects",         "\uE794"),   // Effects
         ("Cloud Search",    "\uEDE4"),   // CloudSearch
-        ("Xe ô tô",         "\uEC47"),   // MobDrivingMode
+        ("Gripper Tool",    "\uE75E"),   // GripperTool
         // ── Tiện ích ──────────────────────────────────
-        ("Ghim",            "\uE718"),   // Pin
-        ("Liên kết",        "\uE71B"),   // Link
+        ("Health",          "\uE95E"),   // Health
+        ("Face",            "\uEB68"),   // NUIFace
         ("Color",           "\uE790"),   // Color
-        ("Bảo mật",         "\uE72E"),   // Shield / security
-        ("Lịch",            "\uE787"),   // Calendar — event servers
+        ("Lock",            "\uE72E"),   // Lock
+        ("Calendar",        "\uE787"),   // Calendar — event servers
         ("Windows Insider", "\uF1AD"),   // WindowsInsider
-        ("Biểu cảm",        "\uF6B8"),   // ExpressiveInputEntry
+        ("Expressive",      "\uF6B8"),   // ExpressiveInputEntry
      ];
 
     public SettingPage()
@@ -89,16 +93,44 @@ public sealed partial class SettingPage : Page
     private void SettingPage_Loaded(object sender, RoutedEventArgs e)
     {
         _isLoading = true;
+
         var mode = LoadNotificationMode();
         if (mode == NotificationService.NotificationModeSilent)
             RadioSilent.IsChecked = true;
         else
             RadioToast.IsChecked = true;
-        _isLoading = false;
+
+        var servers = AppSettings.GetCustomServers();
+        if (servers.Count == 0)
+        {
+            var defaults = new[]
+            {
+                (Id: AppConst.TabMessenger, Name: AppConst.AppIdMessenger, Url:"https://www.messenger.com/",   IconGlyph:"\uE8BD", Order: 0),
+                (Id: AppConst.TabZalo,      Name: AppConst.AppIdZalo,      Url:"https://chat.zalo.me/",        IconGlyph:"\uec42", Order: 1),
+                (Id: AppConst.TabTeams,     Name: AppConst.AppIdTeams,     Url:"https://teams.microsoft.com/", IconGlyph:"\uE902", Order: 2),
+            };
+
+            foreach (var (id, name, url, icon, order) in defaults)
+            {
+                servers.Add(new CustomServerInfo
+                {
+                    Id = id,
+                    Name = name,
+                    Url = url,
+                    IconGlyph = icon,
+                    Order = order,
+                    IsEnable = true
+                });
+            }
+            AppSettings.SaveCustomServers(servers);
+        }
 
         CustomServers.Clear();
-        foreach (var server in AppSettings.GetCustomServers())
+        foreach (var server in servers)
             CustomServers.Add(server);
+
+        VersionText.Text = $"Phiên bản hiện tại: {GetCurrentVersion()}";
+        _isLoading = false;
     }
 
     /// <summary>
@@ -127,7 +159,6 @@ public sealed partial class SettingPage : Page
         if (result is null) return;
 
         var (name, url, glyph) = result.Value;
-
 
         var servers = AppSettings.GetCustomServers();
         var info = new CustomServerInfo { Name = name, Url = url, IconGlyph = glyph, Order = servers.Count };
@@ -177,12 +208,35 @@ public sealed partial class SettingPage : Page
     }
 
     /// <summary>
+    /// Event: Show and hidden server
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private void HiddenServerToggle_Click(object sender, RoutedEventArgs e)
+    {
+        if (sender is not ToggleButton btn || btn.Tag is not string id) return;
+        if (btn is null) return;
+
+        // Persist
+        var servers = AppSettings.GetCustomServers();
+        var saved = servers.FirstOrDefault(s => s.Id == id);
+
+        if (btn.IsChecked == true && saved is not null) saved.IsEnable = true;
+        if (btn.IsChecked == false && saved is not null) saved.IsEnable = false;
+
+        AppSettings.SaveCustomServers(servers);
+        OnServersReordered?.Invoke(this, EventArgs.Empty);
+    }
+
+    /// <summary>
     /// Event: Delete custom server
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="e"></param>
-    private void DeleteServer_Click(object sender, RoutedEventArgs e)
+    private async void DeleteServer_Click(object sender, RoutedEventArgs e)
     {
+        var result = await AppDialog.ShowConfirmAsync(XamlRoot, "Xóa", "Bạn có chắc muốn xóa?");
+        if (!result) return;
         if (sender is not Button btn || btn.Tag is not string id) return;
 
         var server = CustomServers.FirstOrDefault(s => s.Id == id);
@@ -196,6 +250,111 @@ public sealed partial class SettingPage : Page
         AppSettings.SaveCustomServers(servers);
 
         App.MainWindow?.RemoveCustomServerTab(id);
+    }
+
+    /// <summary>
+    /// Event: Check update new version
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    {
+        CheckUpdate.IsEnabled = false;
+
+        try
+        {
+            var releaseResult = await _updateService.GetLatestReleaseAsync();
+
+            if (!releaseResult.Success || releaseResult.Data == null)
+            {
+                await AppDialog.ShowMessageAsync(this.XamlRoot, "Không thể kiểm tra cập nhật", releaseResult.ErrorMessage ?? "Lỗi không xác định.");
+                return;
+            }
+
+            var releaseInfo = releaseResult.Data;
+            var currentVersion = GetCurrentVersion();
+            var latestVersion = NormalizeVersion(releaseInfo.TagName);
+
+            if (string.IsNullOrEmpty(latestVersion))
+            {
+                await AppDialog.ShowMessageAsync(this.XamlRoot, "Không thể kiểm tra cập nhật", "Không tìm thấy thông tin phiên bản từ GitHub.");
+                return;
+            }
+
+            if (!IsNewerVersion(currentVersion, latestVersion))
+            {
+                await AppDialog.ShowMessageAsync(this.XamlRoot, "Cập nhật", $"Phiên bản hiện tại ({currentVersion}) đã là mới nhất.");
+                return;
+            }
+
+            var asset = PickInstallerAsset(releaseInfo.Assets);
+
+            var dialog = new ContentDialog
+            {
+                Title = "Có phiên bản mới",
+                Content = $"Phiên bản hiện tại: {currentVersion}\nPhiên bản mới: {latestVersion}\n\nBạn có muốn tải về và cài đặt ngay không?",
+                PrimaryButtonText = "Tải về và Cài đặt",
+                SecondaryButtonText = "Mở trang GitHub",
+                CloseButtonText = "Để sau",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = CheckUpdate.XamlRoot,
+                RequestedTheme = ActualTheme
+            };
+
+            var dialogResult = await dialog.ShowAsync();
+
+            if (dialogResult == ContentDialogResult.Primary)
+            {
+                if (asset == null || string.IsNullOrEmpty(asset.DownloadUrl))
+                {
+                    await Windows.System.Launcher.LaunchUriAsync(new Uri(releaseInfo.HtmlUrl));
+                    return;
+                }
+
+                var tempPath = Path.Combine(Path.GetTempPath(), asset.Name);
+                var progressDowload = AppDialog.CreateProgressDialog(this.XamlRoot, "Đang tải về", $"Đang tải {asset.Name}...");
+                progressDowload.Show();
+                ServiceResult<string> downloadResult;
+                try
+                {
+                    var progress = new Progress<double>(percent =>
+                        progressDowload.UpdateProgress(percent, $"Đang tải {asset.Name}... ({percent:0}%)"));
+
+                    downloadResult = await _updateService.DownloadFileAsync(asset.DownloadUrl, tempPath, progress);
+                }
+                finally
+                {
+                    progressDowload.Close();
+                }
+
+                if (!downloadResult.Success || downloadResult.Data == null)
+                {
+                    await AppDialog.ShowMessageAsync(this.XamlRoot, "Lỗi tải về", downloadResult.ErrorMessage ?? "Lỗi không xác định.");
+                    return;
+                }
+
+                if (!RunInstaller(downloadResult.Data, out var runError))
+                {
+                    await AppDialog.ShowMessageAsync(this.XamlRoot, "Lỗi cài đặt", runError ?? "Không thể chạy file cài đặt.");
+                    return;
+                }
+
+                await Task.Delay(300);
+                Application.Current.Exit();
+            }
+            else if (dialogResult == ContentDialogResult.Secondary)
+            {
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(releaseInfo.HtmlUrl));
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Log($"[SettingPage] CheckUpdate_Click error: {ex.Message}", ex);
+        }
+        finally
+        {
+            CheckUpdate.IsEnabled = true;
+        }
     }
 
     /// <summary>
@@ -314,6 +473,69 @@ public sealed partial class SettingPage : Page
         OnServersReordered?.Invoke(this, EventArgs.Empty);
     }
 
+    private static string GetCurrentVersion()
+    {
+        var version = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        return version?.Split('+')[0] ?? "0.0.0";
+    }
+
+    private static string NormalizeVersion(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return string.Empty;
+        var v = tag.Trim();
+        if (v.StartsWith("v", StringComparison.OrdinalIgnoreCase)) v = v.Substring(1);
+        var dashIdx = v.IndexOf('-');
+        if (dashIdx >= 0) v = v.Substring(0, dashIdx);
+        return v;
+    }
+
+    private static bool IsNewerVersion(string current, string latest)
+    {
+        if (TryParseVersion(current, out var curV) && TryParseVersion(latest, out var latV))
+            return latV! > curV!;
+
+        return !string.Equals(current, latest, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryParseVersion(string s, out Version? v)
+    {
+        v = null;
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        if (!s.Contains('.')) s += ".0";
+        return Version.TryParse(s, out v);
+    }
+
+    private static GitHubReleaseAsset? PickInstallerAsset(List<GitHubReleaseAsset> assets)
+    {
+        var preferred = assets.FirstOrDefault(a =>
+            a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
+            a.Name.EndsWith(".msix", StringComparison.OrdinalIgnoreCase) ||
+            a.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase));
+
+        return preferred ?? assets.FirstOrDefault();
+    }
+
+    private static bool RunInstaller(string filePath, out string? errorMessage)
+    {
+        errorMessage = null;
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = filePath,
+                UseShellExecute = true,
+                Arguments = "/CLOSEAPPLICATIONS /RESTARTAPPLICATIONS"
+            });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể chạy file cài đặt: {ex.Message}";
+            return false;
+        }
+    }
+
     private static string LoadNotificationMode() => AppSettings.Get(NotificationService.NotificationModeKey) ?? NotificationService.NotificationModeToast;
 
     private static void SaveNotificationMode(string mode) => AppSettings.Set(NotificationService.NotificationModeKey, mode);
@@ -354,7 +576,7 @@ public sealed partial class SettingPage : Page
             tb.Content = new FontIcon
             {
                 Glyph = g,
-                FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                FontFamily = new FontFamily("Segoe Fluent Icons"),
                 FontSize = 18
             };
 
