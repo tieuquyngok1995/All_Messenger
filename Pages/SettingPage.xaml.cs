@@ -8,6 +8,8 @@ using Microsoft.UI.Xaml.Media;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Diagnostics;
+using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
@@ -16,12 +18,12 @@ namespace All_in_One_Messenger.Pages;
 
 public sealed partial class SettingPage : Page
 {
-    private bool _isLoading;
-
+    public event EventHandler? OnServersReordered;
     // Custom server list — bound to ListView in XAML.
     public ObservableCollection<CustomServerInfo> CustomServers { get; } = [];
 
-    public event EventHandler? OnServersReordered;
+    private bool _isLoading;
+    private readonly UpdateService _updateService = new();
 
     // 42 icons (6 × 7) from Segoe Fluent Icons, prioritizing icons suitable for the chat server.
     private static readonly (string Label, string Glyph)[] _iconOptions =
@@ -127,8 +129,7 @@ public sealed partial class SettingPage : Page
         foreach (var server in servers)
             CustomServers.Add(server);
 
-        var version = Assembly.GetExecutingAssembly().GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
-        VersionText.Text = $"Phiên bản hiện tại: {version?.Split('+')[0] ?? "Unknown"}";
+        VersionText.Text = $"Phiên bản hiện tại: {GetCurrentVersion()}";
         _isLoading = false;
     }
 
@@ -232,8 +233,10 @@ public sealed partial class SettingPage : Page
     /// </summary>
     /// <param name="sender"></param>
     /// <param name="e"></param>
-    private void DeleteServer_Click(object sender, RoutedEventArgs e)
+    private async void DeleteServer_Click(object sender, RoutedEventArgs e)
     {
+        var result = await AppDialog.ShowConfirmAsync(XamlRoot, "Xóa", "Bạn có chắc muốn xóa?");
+        if (!result) return;
         if (sender is not Button btn || btn.Tag is not string id) return;
 
         var server = CustomServers.FirstOrDefault(s => s.Id == id);
@@ -249,9 +252,109 @@ public sealed partial class SettingPage : Page
         App.MainWindow?.RemoveCustomServerTab(id);
     }
 
-    private void CheckUpdate_Click(object sender, RoutedEventArgs e)
+    /// <summary>
+    /// Event: Check update new version
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="e"></param>
+    private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
     {
+        CheckUpdate.IsEnabled = false;
 
+        try
+        {
+            var releaseResult = await _updateService.GetLatestReleaseAsync();
+
+            if (!releaseResult.Success || releaseResult.Data == null)
+            {
+                await AppDialog.ShowMessageAsync(this.XamlRoot, "Không thể kiểm tra cập nhật", releaseResult.ErrorMessage ?? "Lỗi không xác định.");
+                return;
+            }
+
+            var releaseInfo = releaseResult.Data;
+            var currentVersion = GetCurrentVersion();
+            var latestVersion = NormalizeVersion(releaseInfo.TagName);
+
+            if (string.IsNullOrEmpty(latestVersion))
+            {
+                await AppDialog.ShowMessageAsync(this.XamlRoot, "Không thể kiểm tra cập nhật", "Không tìm thấy thông tin phiên bản từ GitHub.");
+                return;
+            }
+
+            if (!IsNewerVersion(currentVersion, latestVersion))
+            {
+                await AppDialog.ShowMessageAsync(this.XamlRoot, "Cập nhật", $"Phiên bản hiện tại ({currentVersion}) đã là mới nhất.");
+                return;
+            }
+
+            var asset = PickInstallerAsset(releaseInfo.Assets);
+
+            var dialog = new ContentDialog
+            {
+                Title = "Có phiên bản mới",
+                Content = $"Phiên bản hiện tại: {currentVersion}\nPhiên bản mới: {latestVersion}\n\nBạn có muốn tải về và cài đặt ngay không?",
+                PrimaryButtonText = "Tải về và Cài đặt",
+                SecondaryButtonText = "Mở trang GitHub",
+                CloseButtonText = "Để sau",
+                DefaultButton = ContentDialogButton.Primary,
+                XamlRoot = CheckUpdate.XamlRoot,
+                RequestedTheme = ActualTheme
+            };
+
+            var dialogResult = await dialog.ShowAsync();
+
+            if (dialogResult == ContentDialogResult.Primary)
+            {
+                if (asset == null || string.IsNullOrEmpty(asset.DownloadUrl))
+                {
+                    await Windows.System.Launcher.LaunchUriAsync(new Uri(releaseInfo.HtmlUrl));
+                    return;
+                }
+
+                var tempPath = Path.Combine(Path.GetTempPath(), asset.Name);
+                var progressDowload = AppDialog.CreateProgressDialog(this.XamlRoot, "Đang tải về", $"Đang tải {asset.Name}...");
+                progressDowload.Show();
+                ServiceResult<string> downloadResult;
+                try
+                {
+                    var progress = new Progress<double>(percent =>
+                        progressDowload.UpdateProgress(percent, $"Đang tải {asset.Name}... ({percent:0}%)"));
+
+                    downloadResult = await _updateService.DownloadFileAsync(asset.DownloadUrl, tempPath, progress);
+                }
+                finally
+                {
+                    progressDowload.Close();
+                }
+
+                if (!downloadResult.Success || downloadResult.Data == null)
+                {
+                    await AppDialog.ShowMessageAsync(this.XamlRoot, "Lỗi tải về", downloadResult.ErrorMessage ?? "Lỗi không xác định.");
+                    return;
+                }
+
+                if (!RunInstaller(downloadResult.Data, out var runError))
+                {
+                    await AppDialog.ShowMessageAsync(this.XamlRoot, "Lỗi cài đặt", runError ?? "Không thể chạy file cài đặt.");
+                    return;
+                }
+
+                await Task.Delay(300);
+                Application.Current.Exit();
+            }
+            else if (dialogResult == ContentDialogResult.Secondary)
+            {
+                await Windows.System.Launcher.LaunchUriAsync(new Uri(releaseInfo.HtmlUrl));
+            }
+        }
+        catch (Exception ex)
+        {
+            AppLogger.Log($"[SettingPage] CheckUpdate_Click error: {ex.Message}", ex);
+        }
+        finally
+        {
+            CheckUpdate.IsEnabled = true;
+        }
     }
 
     /// <summary>
@@ -368,6 +471,69 @@ public sealed partial class SettingPage : Page
 
         AppSettings.SaveCustomServers([.. CustomServers]);
         OnServersReordered?.Invoke(this, EventArgs.Empty);
+    }
+
+    private static string GetCurrentVersion()
+    {
+        var version = Assembly.GetExecutingAssembly()
+            .GetCustomAttribute<AssemblyInformationalVersionAttribute>()?.InformationalVersion;
+        return version?.Split('+')[0] ?? "0.0.0";
+    }
+
+    private static string NormalizeVersion(string tag)
+    {
+        if (string.IsNullOrWhiteSpace(tag)) return string.Empty;
+        var v = tag.Trim();
+        if (v.StartsWith("v", StringComparison.OrdinalIgnoreCase)) v = v.Substring(1);
+        var dashIdx = v.IndexOf('-');
+        if (dashIdx >= 0) v = v.Substring(0, dashIdx);
+        return v;
+    }
+
+    private static bool IsNewerVersion(string current, string latest)
+    {
+        if (TryParseVersion(current, out var curV) && TryParseVersion(latest, out var latV))
+            return latV! > curV!;
+
+        return !string.Equals(current, latest, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool TryParseVersion(string s, out Version? v)
+    {
+        v = null;
+        if (string.IsNullOrWhiteSpace(s)) return false;
+        if (!s.Contains('.')) s += ".0";
+        return Version.TryParse(s, out v);
+    }
+
+    private static GitHubReleaseAsset? PickInstallerAsset(List<GitHubReleaseAsset> assets)
+    {
+        var preferred = assets.FirstOrDefault(a =>
+            a.Name.EndsWith(".exe", StringComparison.OrdinalIgnoreCase) ||
+            a.Name.EndsWith(".msix", StringComparison.OrdinalIgnoreCase) ||
+            a.Name.EndsWith(".msi", StringComparison.OrdinalIgnoreCase));
+
+        return preferred ?? assets.FirstOrDefault();
+    }
+
+    private static bool RunInstaller(string filePath, out string? errorMessage)
+    {
+        errorMessage = null;
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = filePath,
+                UseShellExecute = true,
+                Arguments = "/CLOSEAPPLICATIONS /RESTARTAPPLICATIONS"
+            });
+            return true;
+        }
+        catch (Exception ex)
+        {
+            errorMessage = $"Không thể chạy file cài đặt: {ex.Message}";
+            return false;
+        }
     }
 
     private static string LoadNotificationMode() => AppSettings.Get(NotificationService.NotificationModeKey) ?? NotificationService.NotificationModeToast;
