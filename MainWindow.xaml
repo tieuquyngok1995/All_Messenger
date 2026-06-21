@@ -36,7 +36,7 @@
                         Orientation="Horizontal">
 
                 <Button Click="Reload_Click" Style="{StaticResource TitleBarButtonStyle}">
-                    <FontIcon FontFamily="Segoe Fluent Icons" Glyph="&#xe72c;" FontSize="16" ToolTipService.ToolTip="Tải lại trang"/>
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xe72c;" FontSize="16" ToolTipService.ToolTip="Tải lại trang"/>
                 </Button>
 
                 <ToggleButton x:Name="DarkModeToggle"
@@ -48,7 +48,7 @@
                     <FontIcon x:Name="ThemeIcon"
                               FontSize="16"
                               Glyph="&#xEC8A;"
-                              FontFamily="Segoe Fluent Icons"/>
+                              FontFamily="Segoe MDL2 Assets"/>
                 </ToggleButton>
             </StackPanel>
         </Grid>

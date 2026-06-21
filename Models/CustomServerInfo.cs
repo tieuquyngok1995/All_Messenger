@@ -50,7 +50,7 @@ public partial class CustomServerInfo : INotifyPropertyChanged
     }
 
     /// <summary>
-    /// Glyph icon from Segoe Fluent Icons.
+    /// Glyph icon from Segoe MDL2 Assets.
     /// </summary>
     public string IconGlyph
     {

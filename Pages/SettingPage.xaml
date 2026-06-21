@@ -114,7 +114,7 @@
                                             BorderBrush="{ThemeResource SurfaceStrokeColorFlyoutBrush}"
                                             VerticalAlignment="Center">
                                         <FontIcon Glyph="{x:Bind IconGlyph, Mode=OneWay}"
-                                                  FontFamily="Segoe Fluent Icons"
+                                                  FontFamily="Segoe MDL2 Assets"
                                                   FontSize="16"
                                                   Foreground="{ThemeResource TextFillColorPrimaryBrush}"
                                                   HorizontalAlignment="Center"
@@ -144,7 +144,7 @@
                                                 ToolTipService.ToolTip="Chỉnh sửa server"
                                                 Style="{ThemeResource SubtleButtonStyle}"
                                                 Visibility="{x:Bind GetCustomVisibility(Id)}">
-                                            <FontIcon FontFamily="Segoe Fluent Icons"
+                                            <FontIcon FontFamily="Segoe MDL2 Assets"
                                                       Glyph="&#xE70F;"
                                                       FontSize="14"
                                                       Foreground="{ThemeResource AccentTextFillColorPrimaryBrush}"/>
@@ -155,7 +155,7 @@
                                                 ToolTipService.ToolTip="Xóa server"
                                                 Style="{ThemeResource SubtleButtonStyle}"
                                                 Visibility="{x:Bind GetCustomVisibility(Id)}">
-                                            <FontIcon FontFamily="Segoe Fluent Icons"
+                                            <FontIcon FontFamily="Segoe MDL2 Assets"
                                                       Glyph="&#xE74D;"
                                                       FontSize="14"
                                                       Foreground="{ThemeResource SystemFillColorCriticalBrush}"/>
@@ -171,7 +171,7 @@
                                             <FontIcon x:Name="HiddenIcon"
                                                       FontSize="16"
                                                       Glyph="{x:Bind GetIconForServer(IsEnable), Mode=OneWay}"
-                                                      FontFamily="Segoe Fluent Icons"/>
+                                                      FontFamily="Segoe MDL2 Assets"/>
                                         </ToggleButton>
                                     </StackPanel>
                                 </Grid>
@@ -186,7 +186,7 @@
                             Style="{ThemeResource DefaultButtonStyle}"
                             HorizontalAlignment="Left">
                         <StackPanel Orientation="Horizontal" Spacing="8">
-                            <FontIcon FontFamily="Segoe Fluent Icons"
+                            <FontIcon FontFamily="Segoe MDL2 Assets"
                                       Glyph="&#xE710;"
                                       FontSize="14"/>
                             <TextBlock Text="Thêm server"/>
@@ -229,7 +229,7 @@
                                 Click="CheckUpdate_Click"
                                 Style="{ThemeResource DefaultButtonStyle}">
                             <StackPanel Orientation="Horizontal" Spacing="8">
-                                <FontIcon FontFamily="Segoe Fluent Icons"
+                                <FontIcon FontFamily="Segoe MDL2 Assets"
                                           Glyph="&#xE895;"
                                           FontSize="14"/>
                                 <TextBlock Text="Kiểm tra cập nhật" />

@@ -315,7 +315,7 @@ public sealed partial class MainWindow : Window
             Icon = new FontIcon
             {
                 Glyph = info.IconGlyph,
-                FontFamily = new FontFamily("Segoe Fluent Icons")
+                FontFamily = new FontFamily("Segoe MDL2 Assets")
             }
         };
         NavView.MenuItems.Add(navItem);
@@ -520,7 +520,7 @@ public sealed partial class MainWindow : Window
                 Content = s.Name,
                 Tag = s.Id,
                 Visibility = s.IsEnable ? Visibility.Visible : Visibility.Collapsed,
-                Icon = new FontIcon { FontFamily = new FontFamily("Segoe Fluent Icons"), Glyph = s.IconGlyph }
+                Icon = new FontIcon { FontFamily = new FontFamily("Segoe MDL2 Assets"), Glyph = s.IconGlyph }
             };
             ToolTipService.SetToolTip(navItem, s.Name);
             NavView.MenuItems.Add(navItem);

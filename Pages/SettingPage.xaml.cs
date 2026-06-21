@@ -25,7 +25,7 @@ public sealed partial class SettingPage : Page
     private bool _isLoading;
     private readonly UpdateService _updateService = new();
 
-    // 42 icons (6 × 7) from Segoe Fluent Icons, prioritizing icons suitable for the chat server.
+    // 42 icons (6 × 7) from Segoe MDL2 Assets, prioritizing icons suitable for the chat server.
     private static readonly (string Label, string Glyph)[] _iconOptions =
     [
         // ── Nhắn tin ──────────────────────────────────
@@ -576,7 +576,7 @@ public sealed partial class SettingPage : Page
             tb.Content = new FontIcon
             {
                 Glyph = g,
-                FontFamily = new FontFamily("Segoe Fluent Icons"),
+                FontFamily = new FontFamily("Segoe MDL2 Assets"),
                 FontSize = 18
             };
 
