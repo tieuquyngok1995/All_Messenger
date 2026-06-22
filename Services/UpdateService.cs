@@ -15,7 +15,10 @@ public class UpdateService
 
     public UpdateService()
     {
-        _httpClient = new HttpClient();
+        _httpClient = new HttpClient(new SocketsHttpHandler { PooledConnectionLifetime = TimeSpan.FromMinutes(5) })
+        {
+            Timeout = TimeSpan.FromSeconds(15)
+        };
     }
 
     /// <summary>

@@ -8,7 +8,7 @@
 ; ============================================================
 
 #define AppName      "All-in-One Messenger"
-#define AppVersion   "1.0.5"
+#define AppVersion   "1.0.6"
 #define AppPublisher "MrRom"
 #define AppExeName   "AllinOneMessenger.exe"
 #define AppIcon      "..\Assets\icon.ico"

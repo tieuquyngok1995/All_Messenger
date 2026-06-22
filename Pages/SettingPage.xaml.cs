@@ -267,6 +267,7 @@ public sealed partial class SettingPage : Page
 
         try
         {
+            await Task.Delay(2000);
             var releaseResult = await _updateService.GetLatestReleaseAsync();
             SetCheckUpdateLoading(false);
 
