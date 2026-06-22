@@ -100,19 +100,19 @@ public sealed partial class SettingPage : Page
         else
             RadioToast.IsChecked = true;
 
-        var servers = AppSettings.GetCustomServers();
-        if (servers.Count == 0)
-        {
-            var defaults = new[]
+        var defaults = new[]
             {
                 (Id: AppConst.TabMessenger, Name: AppConst.AppIdMessenger, Url:"https://www.messenger.com/",   IconGlyph:"\uE8BD", Order: 0),
                 (Id: AppConst.TabZalo,      Name: AppConst.AppIdZalo,      Url:"https://chat.zalo.me/",        IconGlyph:"\uec42", Order: 1),
                 (Id: AppConst.TabTeams,     Name: AppConst.AppIdTeams,     Url:"https://teams.microsoft.com/", IconGlyph:"\uE902", Order: 2),
             };
-
-            foreach (var (id, name, url, icon, order) in defaults)
+        var servers = AppSettings.GetCustomServers();
+        bool changed = false;
+        foreach (var (id, name, url, icon, order) in defaults.Reverse())
+        {
+            if (!servers.Any(s => s.Id == id))
             {
-                servers.Add(new CustomServerInfo
+                servers.Insert(0, new CustomServerInfo
                 {
                     Id = id,
                     Name = name,
@@ -121,9 +121,12 @@ public sealed partial class SettingPage : Page
                     Order = order,
                     IsEnable = true
                 });
+                changed = true;
             }
-            AppSettings.SaveCustomServers(servers);
         }
+
+        if (changed)
+            AppSettings.SaveCustomServers(servers);
 
         CustomServers.Clear();
         foreach (var server in servers)
@@ -259,11 +262,13 @@ public sealed partial class SettingPage : Page
     /// <param name="e"></param>
     private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
     {
+        SetCheckUpdateLoading(true);
         CheckUpdate.IsEnabled = false;
 
         try
         {
             var releaseResult = await _updateService.GetLatestReleaseAsync();
+            SetCheckUpdateLoading(false);
 
             if (!releaseResult.Success || releaseResult.Data == null)
             {
@@ -354,6 +359,7 @@ public sealed partial class SettingPage : Page
         finally
         {
             CheckUpdate.IsEnabled = true;
+            SetCheckUpdateLoading(false);
         }
     }
 
@@ -539,6 +545,14 @@ public sealed partial class SettingPage : Page
     private static string LoadNotificationMode() => AppSettings.Get(NotificationService.NotificationModeKey) ?? NotificationService.NotificationModeToast;
 
     private static void SaveNotificationMode(string mode) => AppSettings.Set(NotificationService.NotificationModeKey, mode);
+
+    private void SetCheckUpdateLoading(bool isLoading)
+    {
+        CheckUpdate.IsEnabled = !isLoading;
+
+        LoadingOverlay.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+        CheckUpdateRing.IsActive = isLoading;
+    }
 
     /// <summary>
     /// Creates a 5-column icon grid. The user selects an icon — radio-inclusive.
