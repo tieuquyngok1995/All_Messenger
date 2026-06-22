@@ -3,6 +3,7 @@ using System;
 using System.IO;
 using System.Net.Http;
 using System.Text.Json;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace All_in_One_Messenger.Services;
@@ -20,7 +21,7 @@ public class UpdateService
     /// <summary>
     /// Send a request to retrieve the latest release, returning the raw data (tags, HTML URL, asset list).
     /// </summary>
-    public async Task<ServiceResult<GitHubReleaseInfo>> GetLatestReleaseAsync()
+    public async Task<ServiceResult<GitHubReleaseInfo>> GetLatestReleaseAsync(CancellationToken cancellationToken = default)
     {
         try
         {
@@ -28,7 +29,7 @@ public class UpdateService
             request.Headers.UserAgent.ParseAdd("AllInOneMessenger-UpdateChecker");
             request.Headers.Accept.ParseAdd("application/vnd.github+json");
 
-            using var response = await _httpClient.SendAsync(request);
+            using var response = await _httpClient.SendAsync(request, cancellationToken);
 
             if (!response.IsSuccessStatusCode)
             {

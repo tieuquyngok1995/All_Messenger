@@ -262,11 +262,13 @@ public sealed partial class SettingPage : Page
     /// <param name="e"></param>
     private async void CheckUpdate_Click(object sender, RoutedEventArgs e)
     {
+        SetCheckUpdateLoading(true);
         CheckUpdate.IsEnabled = false;
 
         try
         {
             var releaseResult = await _updateService.GetLatestReleaseAsync();
+            SetCheckUpdateLoading(false);
 
             if (!releaseResult.Success || releaseResult.Data == null)
             {
@@ -357,6 +359,7 @@ public sealed partial class SettingPage : Page
         finally
         {
             CheckUpdate.IsEnabled = true;
+            SetCheckUpdateLoading(false);
         }
     }
 
@@ -542,6 +545,14 @@ public sealed partial class SettingPage : Page
     private static string LoadNotificationMode() => AppSettings.Get(NotificationService.NotificationModeKey) ?? NotificationService.NotificationModeToast;
 
     private static void SaveNotificationMode(string mode) => AppSettings.Set(NotificationService.NotificationModeKey, mode);
+
+    private void SetCheckUpdateLoading(bool isLoading)
+    {
+        CheckUpdate.IsEnabled = !isLoading;
+
+        LoadingOverlay.Visibility = isLoading ? Visibility.Visible : Visibility.Collapsed;
+        CheckUpdateRing.IsActive = isLoading;
+    }
 
     /// <summary>
     /// Creates a 5-column icon grid. The user selects an icon — radio-inclusive.
