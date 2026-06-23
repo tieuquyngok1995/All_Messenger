@@ -95,6 +95,10 @@ public sealed partial class MainWindow : Window
         _appWindow.Resize(new Windows.Graphics.SizeInt32(1100, 720));
         SystemBackdrop = new MicaBackdrop();
 
+        _appWindow.TitleBar.ButtonBackgroundColor = Colors.Transparent;
+        _appWindow.TitleBar.ButtonInactiveBackgroundColor = Colors.Transparent;
+        _appWindow.TitleBar.ButtonHoverBackgroundColor = Colors.Transparent;
+
         // InitializeTheme
         ApplyTheme(LoadTheme());
         UpdateIcons();
