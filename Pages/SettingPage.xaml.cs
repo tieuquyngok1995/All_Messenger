@@ -1,10 +1,11 @@
-using All_in_One_Messenger.Helper;
+﻿using All_in_One_Messenger.Helper;
 using All_in_One_Messenger.Models;
 using All_in_One_Messenger.Services;
 using Microsoft.UI.Xaml;
 using Microsoft.UI.Xaml.Controls;
 using Microsoft.UI.Xaml.Controls.Primitives;
 using Microsoft.UI.Xaml.Media;
+using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
 using System.Collections.ObjectModel;
@@ -13,6 +14,7 @@ using System.IO;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
+using Windows.Storage.Pickers;
 
 namespace All_in_One_Messenger.Pages;
 
@@ -33,49 +35,48 @@ public sealed partial class SettingPage : Page
         ("Chat",            "\uE8BD"),   // Chat bubble
         ("Message",         "\uE715"),   // Message
         ("Quick Note",      "\uE70B"),   // Quick Note
-        ("Micro",           "\uE720"),   // Microphone — voice channel
+        ("MapPin",          "\uE707"),   // MapPin
         ("Airplane",        "\uE709"),   // Airplane
-        ("Shop",            "\uE719"),   // Shop
+        ("Favorite",        "\uE728"),   // FavoriteList
         // ── Giao tiếp ─────────────────────────────────
+        ("Slideshow",       "\uE786"),   // Slideshow
         ("Phone",           "\uE717"),   // Phone
         ("Video call",      "\uE714"),   // Video camera
-        ("Headset",         "\uE95B"),   // Headset — Discord / voice
+        ("Education",       "\uE7BE"),   // Education
         ("Work",            "\uE821"),   // Work
-        ("Group",           "\uEC26"),   // Send
         ("Book",            "\uE736"),   // ReadingMode
-        ("OEM",             "\uE74C"),   // OEM
+        ("Tinder",          "\uECAD"),   // Tinder
         // ── Cộng đồng ─────────────────────────────────
         ("Person",          "\uE77B"),   // Person
         ("System",          "\uE770"),   // System
-        ("Emoji",           "\uE899"),   // Emoji
-        ("Star",            "\uE734"),   // Heart favorite
+        ("Bank",            "\uE825"),   // Bank
+        ("Star",            "\uE734"),   // Star
         ("Report Document", "\uE9F9"),   // ReportDocument
-        ("Tinder",          "\uECAD"),   // Tinder
         ("Monitor",         "\uE7F4"),   // Monitor
+        ("OEM",             "\uE74C"),   // OEM
         // ── Giải trí ──────────────────────────────────
         ("Game",            "\uE7FC"),   // Game controller
         ("Camera",          "\uE722"),   // Camera
         ("Music",           "\uE8D6"),   // Music note — music bot servers
-        ("Video",           "\uE714"),   // Video
+        ("Picture",         "\uE8B9"),   // Picture
         ("Cloud",           "\uE753"),   // Cloud
-        ("Alert",           "\uF6C5"),   // Alert
-        ("Leaf Two",        "\uF1E8"),   // LeafTwo
+        ("Calendar",        "\uE8BF"),   // Calendar
+        ("Processing",      "\uE9F5"),   // Processing
         // ── Công nghệ ─────────────────────────────────
         ("Connect",         "\uE703"),   // Connect
         ("Mobile Phone",    "\uE8EA"),   // Mobile phone
         ("Report Hacked",   "\uE730"),   // ReportHacked
         ("Magazine",        "\uE8A1"),   // PreviewLink
-        ("Effects",         "\uE794"),   // Effects
+        ("Certificate",     "\uEB95"),   // Certificate
         ("Cloud Search",    "\uEDE4"),   // CloudSearch
         ("Gripper Tool",    "\uE75E"),   // GripperTool
         // ── Tiện ích ──────────────────────────────────
-        ("Health",          "\uE95E"),   // Health
         ("Face",            "\uEB68"),   // NUIFace
+        ("Health",          "\uE95E"),   // Health
         ("Color",           "\uE790"),   // Color
         ("Lock",            "\uE72E"),   // Lock
         ("Calendar",        "\uE787"),   // Calendar — event servers
-        ("Windows Insider", "\uF1AD"),   // WindowsInsider
-        ("Expressive",      "\uF6B8"),   // ExpressiveInputEntry
+        ("Task",            "\uE9D5"),   // Task
      ];
 
     public SettingPage()
@@ -117,9 +118,9 @@ public sealed partial class SettingPage : Page
                     Id = id,
                     Name = name,
                     Url = url,
-                    IconGlyph = icon,
+                    IconName = icon,
                     Order = order,
-                    IsEnable = true
+                    IsEnabled = true
                 });
                 changed = true;
             }
@@ -161,10 +162,10 @@ public sealed partial class SettingPage : Page
         var result = await ShowServerDialogAsync("Thêm chat server", "Thêm");
         if (result is null) return;
 
-        var (name, url, glyph) = result.Value;
+        var (name, url, iconName) = result.Value;
 
         var servers = AppSettings.GetCustomServers();
-        var info = new CustomServerInfo { Name = name, Url = url, IconGlyph = glyph, Order = servers.Count };
+        var info = new CustomServerInfo { Name = name, Url = url, IconName = iconName, Order = servers.Count };
 
         servers.Add(info);
         AppSettings.SaveCustomServers(servers);
@@ -186,15 +187,15 @@ public sealed partial class SettingPage : Page
 
         var result = await ShowServerDialogAsync(
             "Chỉnh sửa server", "Lưu",
-            server.Name, server.Url, server.IconGlyph);
+            server.Name, server.Url, server.IconType, server.IconName);
         if (result is null) return;
 
-        var (name, url, glyph) = result.Value;
+        var (name, url, iconName) = result.Value;
 
         // Update model — INPC automatically refreshes ListView
         server.Name = name;
         server.Url = url;
-        server.IconGlyph = glyph;
+        server.IconName = iconName;
 
         // Persist
         var servers = AppSettings.GetCustomServers();
@@ -203,11 +204,11 @@ public sealed partial class SettingPage : Page
         {
             saved.Name = name;
             saved.Url = url;
-            saved.IconGlyph = glyph;
+            saved.IconName = iconName;
         }
         AppSettings.SaveCustomServers(servers);
 
-        App.MainWindow?.UpdateCustomServerTab(id, name, glyph, url);
+        App.MainWindow?.UpdateCustomServerTab(id, name, iconName, url);
     }
 
     /// <summary>
@@ -224,8 +225,8 @@ public sealed partial class SettingPage : Page
         var servers = AppSettings.GetCustomServers();
         var saved = servers.FirstOrDefault(s => s.Id == id);
 
-        if (btn.IsChecked == true && saved is not null) saved.IsEnable = true;
-        if (btn.IsChecked == false && saved is not null) saved.IsEnable = false;
+        if (btn.IsChecked == true && saved is not null) saved.IsEnabled = true;
+        if (btn.IsChecked == false && saved is not null) saved.IsEnabled = false;
 
         AppSettings.SaveCustomServers(servers);
         OnServersReordered?.Invoke(this, EventArgs.Empty);
@@ -244,6 +245,9 @@ public sealed partial class SettingPage : Page
 
         var server = CustomServers.FirstOrDefault(s => s.Id == id);
         if (server is null) return;
+
+        if (server.IconType == IconType.Image)
+            AppSettings.DeleteIconIfLocal(server.IconName);
 
         CustomServers.Remove(server);
 
@@ -368,11 +372,11 @@ public sealed partial class SettingPage : Page
     /// Event: Displaying the server dialog
     /// </summary>
     /// <returns></returns>
-    private Task<(string Name, string Url, string IconGlyph)?> ShowServerDialogAsync(
-        string title, string primaryButton, string initName = "", string initUrl = "", string initGlyph = "")
+    private Task<(string Name, string Url, string IconName)?> ShowServerDialogAsync(
+        string title, string primaryButton, string initName = "", string initUrl = "", IconType iconType = IconType.Glyph, string initIconName = "")
     {
-        if (string.IsNullOrEmpty(initGlyph))
-            initGlyph = _iconOptions[0].Glyph;
+        if (string.IsNullOrEmpty(initIconName))
+            initIconName = _iconOptions[0].Glyph;
 
         var nameBox = new TextBox
         {
@@ -393,8 +397,14 @@ public sealed partial class SettingPage : Page
             Visibility = Visibility.Collapsed
         };
 
-        string selectedGlyph = initGlyph;
-        var iconPicker = BuildIconPicker(selectedGlyph, g => selectedGlyph = g);
+        string selectedIconName = initIconName;
+        var pendingImages = new List<string>();
+
+        var iconPicker = BuildIconPicker(iconType, selectedIconName, g =>
+        {
+            selectedIconName = g;
+            if (!IsGlyphIcon(g) && !pendingImages.Contains(g)) pendingImages.Add(g);
+        });
 
         var panel = new StackPanel { Spacing = 12, Width = 360 };
         panel.Children.Add(nameBox);
@@ -458,11 +468,23 @@ public sealed partial class SettingPage : Page
                 return;
             }
 
-            tcs.TrySetResult((name, url, selectedGlyph));
+            foreach (var path in pendingImages)
+                if (!string.Equals(path, selectedIconName, StringComparison.OrdinalIgnoreCase)
+                    && !string.Equals(path, initIconName, StringComparison.OrdinalIgnoreCase))
+                    AppSettings.DeleteIconIfLocal(path);
+
+            if (!string.Equals(initIconName, selectedIconName, StringComparison.OrdinalIgnoreCase))
+                AppSettings.DeleteIconIfLocal(initIconName);
+
+            tcs.TrySetResult((name, url, selectedIconName));
         };
 
         dialog.CloseButtonClick += (_, _) =>
         {
+            foreach (var path in pendingImages)
+                if (!string.Equals(path, initIconName, StringComparison.OrdinalIgnoreCase))
+                    AppSettings.DeleteIconIfLocal(path);
+
             tcs.TrySetResult(null);
         };
 
@@ -470,6 +492,11 @@ public sealed partial class SettingPage : Page
         return tcs.Task;
     }
 
+    /// <summary>
+    /// Handle drag-and-drop server events on a list of custom servers.
+    /// </summary>
+    /// <param name="sender"></param>
+    /// <param name="args"></param>
     private void ServerListView_DragItemsCompleted(ListViewBase sender, DragItemsCompletedEventArgs args)
     {
         // Update the Order to its current position in the ObservableCollection
@@ -480,6 +507,10 @@ public sealed partial class SettingPage : Page
         OnServersReordered?.Invoke(this, EventArgs.Empty);
     }
 
+    /// <summary>
+    /// Get the current version of the app.
+    /// </summary>
+    /// <returns></returns>
     private static string GetCurrentVersion()
     {
         var version = Assembly.GetExecutingAssembly()
@@ -491,9 +522,9 @@ public sealed partial class SettingPage : Page
     {
         if (string.IsNullOrWhiteSpace(tag)) return string.Empty;
         var v = tag.Trim();
-        if (v.StartsWith("v", StringComparison.OrdinalIgnoreCase)) v = v.Substring(1);
+        if (v.StartsWith("v", StringComparison.OrdinalIgnoreCase)) v = v[1..];
         var dashIdx = v.IndexOf('-');
-        if (dashIdx >= 0) v = v.Substring(0, dashIdx);
+        if (dashIdx >= 0) v = v[..dashIdx];
         return v;
     }
 
@@ -555,20 +586,19 @@ public sealed partial class SettingPage : Page
         CheckUpdateRing.IsActive = isLoading;
     }
 
-    /// <summary>
-    /// Creates a 5-column icon grid. The user selects an icon — radio-inclusive.
-    /// onChanged is called every time the selection changes.
-    /// </summary>
-    private static UIElement BuildIconPicker(string initialGlyph, Action<string> onChanged)
+    private static Grid BuildIconPicker(IconType iconType, string initialIconName, Action<string> onChanged)
     {
         const int cols = 7;
-        var toggles = new Dictionary<string, ToggleButton>(_iconOptions.Length);
+        var toggles = new Dictionary<string, ToggleButton>(_iconOptions.Length + 1);
         bool updating = false;
+
+        string currentIconName = initialIconName;
 
         var grid = new Grid { RowSpacing = 4, ColumnSpacing = 4 };
         for (int c = 0; c < cols; c++)
             grid.ColumnDefinitions.Add(new ColumnDefinition { Width = new GridLength(48) });
 
+        // ── 42 glyph icons ──────────────────────────────────────
         for (int i = 0; i < _iconOptions.Length; i++)
         {
             int row = i / cols;
@@ -585,7 +615,7 @@ public sealed partial class SettingPage : Page
                 Height = 44,
                 Padding = new Thickness(0),
                 CornerRadius = new CornerRadius(8),
-                IsChecked = g == initialGlyph
+                IsChecked = g == initialIconName
             };
             ToolTipService.SetToolTip(tb, label);
             tb.Content = new FontIcon
@@ -594,7 +624,6 @@ public sealed partial class SettingPage : Page
                 FontFamily = new FontFamily("Segoe MDL2 Assets"),
                 FontSize = 18
             };
-
             tb.Checked += (_, _) =>
             {
                 if (updating) return;
@@ -602,16 +631,143 @@ public sealed partial class SettingPage : Page
                 foreach (var (k, v) in toggles)
                     if (k != g) v.IsChecked = false;
                 updating = false;
+
+                currentIconName = g;
                 onChanged(g);
             };
-
             toggles[g] = tb;
             Grid.SetRow(tb, row);
             Grid.SetColumn(tb, col);
             grid.Children.Add(tb);
         }
 
+        // ── Last slot: select image from device ─────────────────
+        {
+            const string fileKey = "__file__";
+            int idx = _iconOptions.Length;
+            int row = idx / cols;
+            int col = idx % cols;
+            if (col == 0)
+                grid.RowDefinitions.Add(new RowDefinition { Height = new GridLength(48) });
+
+            bool initIsImage = iconType == IconType.Image;
+
+            var thumb = new Image
+            {
+                Width = 28,
+                Height = 28,
+                Stretch = Stretch.UniformToFill,
+                Visibility = initIsImage ? Visibility.Visible : Visibility.Collapsed
+            };
+            var addIcon = new FontIcon
+            {
+                Glyph = "\uEB9F",
+                FontFamily = new FontFamily("Segoe MDL2 Assets"),
+                FontSize = 18,
+                Visibility = initIsImage ? Visibility.Collapsed : Visibility.Visible
+            };
+
+            if (initIsImage && File.Exists(initialIconName))
+                thumb.Source = new BitmapImage(new Uri(initialIconName, UriKind.Absolute));
+            else if (initIsImage)
+            {
+                thumb.Visibility = Visibility.Collapsed;
+                addIcon.Visibility = Visibility.Visible;
+                initIsImage = false;
+                currentIconName = _iconOptions[0].Glyph;
+            }
+
+            var iconHost = new Grid();
+            iconHost.Children.Add(addIcon);
+            iconHost.Children.Add(thumb);
+
+            var fileBtn = new ToggleButton
+            {
+                Width = 44,
+                Height = 44,
+                Padding = new Thickness(0),
+                CornerRadius = new CornerRadius(8),
+                Content = iconHost,
+                IsChecked = initIsImage
+            };
+            ToolTipService.SetToolTip(fileBtn, "Chọn ảnh từ máy");
+
+            fileBtn.Click += async (_, _) =>
+            {
+                if (updating) return;
+
+                updating = true;
+                foreach (var (k, v) in toggles)
+                    if (k != fileKey) v.IsChecked = false;
+                fileBtn.IsChecked = true;
+                updating = false;
+
+                var picker = new FileOpenPicker();
+                var hwnd = WinRT.Interop.WindowNative.GetWindowHandle(App.MainWindow);
+                WinRT.Interop.InitializeWithWindow.Initialize(picker, hwnd);
+                picker.FileTypeFilter.Add(".png");
+                picker.FileTypeFilter.Add(".jpg");
+                picker.FileTypeFilter.Add(".jpeg");
+                picker.FileTypeFilter.Add(".webp");
+
+                var file = await picker.PickSingleFileAsync();
+                if (file == null)
+                {
+                    // Hủy → khôi phục trạng thái trước đó
+                    updating = true;
+                    fileBtn.IsChecked = !IsGlyphIcon(currentIconName);
+                    if (IsGlyphIcon(currentIconName) && toggles.TryGetValue(currentIconName, out var prev))
+                        prev.IsChecked = true;
+                    updating = false;
+                    return;
+                }
+
+                var savedPath = AppSettings.SaveIconLocally(file);
+
+                if (string.IsNullOrEmpty(savedPath))
+                {
+                    updating = true;
+                    fileBtn.IsChecked = false;
+                    if (toggles.TryGetValue("\uE774", out var defBtn))
+                        defBtn.IsChecked = true;
+                    updating = false;
+
+                    thumb.Source = null;
+                    thumb.Visibility = Visibility.Collapsed;
+                    addIcon.Visibility = Visibility.Visible;
+                    ToolTipService.SetToolTip(fileBtn, "Chọn ảnh từ máy");
+
+                    currentIconName = "\uE774";
+                    onChanged("\uE774");
+                    return;
+                }
+
+                thumb.Source = new BitmapImage(new Uri(savedPath, UriKind.Absolute));
+                thumb.Visibility = Visibility.Visible;
+                addIcon.Visibility = Visibility.Collapsed;
+                ToolTipService.SetToolTip(fileBtn, file.Name);
+
+                currentIconName = savedPath;
+                onChanged(savedPath);
+            };
+
+            fileBtn.Unchecked += (_, _) =>
+            {
+                if (updating) return;
+                thumb.Source = null;
+                thumb.Visibility = Visibility.Collapsed;
+                addIcon.Visibility = Visibility.Visible;
+                ToolTipService.SetToolTip(fileBtn, "Chọn ảnh từ máy");
+            };
+
+            toggles[fileKey] = fileBtn;
+            Grid.SetRow(fileBtn, row);
+            Grid.SetColumn(fileBtn, col);
+            grid.Children.Add(fileBtn);
+        }
+
         return grid;
     }
 
+    private static bool IsGlyphIcon(string value) => value.Length == 1 && value[0] >= '\uE700' && value[0] <= '\uF8FF';
 }

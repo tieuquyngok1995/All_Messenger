@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Page
     x:Class="All_in_One_Messenger.Pages.SettingPage"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -111,12 +111,24 @@
                                                 Background="{ThemeResource ControlFillColorSecondaryBrush}"
                                                 BorderBrush="{ThemeResource SurfaceStrokeColorFlyoutBrush}"
                                                 VerticalAlignment="Center">
-                                            <FontIcon Glyph="{x:Bind IconGlyph, Mode=OneWay}"
-                                                      FontFamily="Segoe MDL2 Assets"
-                                                      FontSize="16"
-                                                      Foreground="{ThemeResource TextFillColorPrimaryBrush}"
-                                                      HorizontalAlignment="Center"
-                                                      VerticalAlignment="Center"/>
+                                            <Grid>
+                                                <FontIcon x:Name="GlyphIcon"
+                                                          x:Load="{x:Bind IsGlyphIcon}"
+                                                          Glyph="{x:Bind IconName, Mode=OneWay}"
+                                                          FontFamily="Segoe MDL2 Assets"
+                                                          FontSize="16"
+                                                          Foreground="{ThemeResource TextFillColorPrimaryBrush}"
+                                                          HorizontalAlignment="Center"
+                                                          VerticalAlignment="Center"/>
+
+                                                <Image x:Name="ImageIcon"
+                                                       x:Load="{x:Bind IsImageIcon}"
+                                                       Width="28" Height="28"
+                                                       Stretch="UniformToFill"
+                                                       HorizontalAlignment="Center"
+                                                       VerticalAlignment="Center"
+                                                       Source="{x:Bind ImageSource, Mode=OneWay}"/>
+                                            </Grid>
                                         </Border>
 
                                         <!-- Name + URL -->
@@ -160,13 +172,13 @@
                                             <ToggleButton Tag="{x:Bind Id}"
                                                           x:Name="HiddenServerToggle"
                                                           Click="HiddenServerToggle_Click"
-                                                          IsChecked="{x:Bind IsEnable, Mode=TwoWay}"
+                                                          IsChecked="{x:Bind IsEnabled, Mode=TwoWay}"
                                                           Style="{StaticResource TitleBarToggleButtonStyle}"
                                                           Visibility="{x:Bind GetDefaultVisibility(Id)}"
                                                           ToolTipService.ToolTip="Ẩn/hiện server ">
                                                 <FontIcon x:Name="HiddenIcon"
                                                           FontSize="16"
-                                                          Glyph="{x:Bind GetIconForServer(IsEnable), Mode=OneWay}"
+                                                          Glyph="{x:Bind GetIconForServer(IsEnabled), Mode=OneWay}"
                                                           FontFamily="Segoe MDL2 Assets"/>
                                             </ToggleButton>
                                         </StackPanel>
