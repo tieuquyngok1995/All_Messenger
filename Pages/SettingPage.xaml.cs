@@ -208,7 +208,7 @@ public sealed partial class SettingPage : Page
         }
         AppSettings.SaveCustomServers(servers);
 
-        App.MainWindow?.UpdateCustomServerTab(id, name, iconName, url);
+        App.MainWindow?.UpdateCustomServerTab(id, server, url);
     }
 
     /// <summary>

@@ -12,6 +12,7 @@ using Microsoft.UI.Xaml.Media.Animation;
 using Microsoft.UI.Xaml.Media.Imaging;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using Windows.System;
@@ -74,7 +75,7 @@ public sealed partial class MainWindow : Window
                 var tab = _tabs.FirstOrDefault(x => x.Value.AppId == server.Name).Value;
                 if (tab.MenuItem == null) continue;
 
-                tab.MenuItem.Visibility = server.IsEnable ? Visibility.Visible : Visibility.Collapsed;
+                tab.MenuItem.Visibility = server.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
                 NavView.MenuItems.Remove(tab.MenuItem);
                 NavView.MenuItems.Add(tab.MenuItem);
             }
@@ -316,11 +317,7 @@ public sealed partial class MainWindow : Window
         {
             Content = info.Name,
             Tag = info.Id,
-            Icon = new FontIcon
-            {
-                Glyph = info.IconGlyph,
-                FontFamily = new FontFamily("Segoe MDL2 Assets")
-            }
+            Icon = BuildIcon(info),
         };
         NavView.MenuItems.Add(navItem);
         UpdateNavItemTooltips();
@@ -355,18 +352,17 @@ public sealed partial class MainWindow : Window
         _customPages.Remove(id);
     }
 
-    internal void UpdateCustomServerTab(string id, string name, string glyph, string url)
+    internal void UpdateCustomServerTab(string id, CustomServerInfo server, string url)
     {
         var navItem = NavView.MenuItems
-            .OfType<NavigationViewItem>()
-            .FirstOrDefault(i => i.Tag?.ToString() == id);
+        .OfType<NavigationViewItem>()
+        .FirstOrDefault(i => i.Tag?.ToString() == id);
         if (navItem is not null)
         {
-            navItem.Content = name;
-            if (navItem.Icon is FontIcon fi)
-                fi.Glyph = glyph;
+            navItem.Content = server.Name;
+            navItem.Icon = BuildIcon(server);
+            ToolTipService.SetToolTip(navItem, server.Name);
         }
-
         if (_customPages.TryGetValue(id, out var page))
             page.NavigateTo(url);
     }
@@ -514,7 +510,7 @@ public sealed partial class MainWindow : Window
         {
             if (fixedItems.TryGetValue(s.Id, out var fixedItem))
             {
-                fixedItem.Visibility = s.IsEnable ? Visibility.Visible : Visibility.Collapsed;
+                fixedItem.Visibility = s.IsEnabled ? Visibility.Visible : Visibility.Collapsed;
                 NavView.MenuItems.Add(fixedItem);
                 continue;
             }
@@ -523,8 +519,8 @@ public sealed partial class MainWindow : Window
             {
                 Content = s.Name,
                 Tag = s.Id,
-                Visibility = s.IsEnable ? Visibility.Visible : Visibility.Collapsed,
-                Icon = new FontIcon { FontFamily = new FontFamily("Segoe MDL2 Assets"), Glyph = s.IconGlyph }
+                Visibility = s.IsEnabled ? Visibility.Visible : Visibility.Collapsed,
+                Icon = BuildIcon(s)
             };
             ToolTipService.SetToolTip(navItem, s.Name);
             NavView.MenuItems.Add(navItem);
@@ -532,6 +528,17 @@ public sealed partial class MainWindow : Window
 
         // Refresh tooltip shortcut number
         UpdateNavItemTooltips();
+    }
+
+    IconElement BuildIcon(CustomServerInfo s)
+    {
+        if (s.IconType == IconType.Image && File.Exists(s.IconName))
+            return new ImageIcon { Source = new BitmapImage(new Uri(s.IconName, UriKind.Absolute)) };
+        return new FontIcon
+        {
+            FontFamily = new FontFamily("Segoe MDL2 Assets"),
+            Glyph = s.IconType == IconType.Glyph ? s.IconName : "\uE774" // fallback nếu file mất
+        };
     }
     #endregion
 
