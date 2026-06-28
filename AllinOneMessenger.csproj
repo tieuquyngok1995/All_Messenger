@@ -6,41 +6,31 @@
     <RootNamespace>All_in_One_Messenger</RootNamespace>
     <AssemblyTitle>All in One Messenger</AssemblyTitle>
     <Product>All in One Messenger</Product>
-    <Version>1.0.6</Version>
-    <AssemblyVersion>1.0.6.0</AssemblyVersion>
-    <FileVersion>1.0.6.0</FileVersion>
+    <Version>1.0.7</Version>
+    <AssemblyVersion>1.0.7.0</AssemblyVersion>
+    <FileVersion>1.0.7.0</FileVersion>
     <UseWinUI>true</UseWinUI>
     <Nullable>enable</Nullable>
     <ApplicationManifest>app.manifest</ApplicationManifest>
     <ApplicationIcon>Assets\icon.ico</ApplicationIcon>
 
-    <!-- Unpackaged -->
     <WindowsPackageType>None</WindowsPackageType>
-    <!--<WindowsPackageType>MSIX</WindowsPackageType>
-	<EnableMsixTooling>true</EnableMsixTooling>-->
 
-    <!-- x64 only -->
     <Platforms>x64</Platforms>
     <RuntimeIdentifier>win-x64</RuntimeIdentifier>
     <PlatformTarget>x64</PlatformTarget>
 
-    <!-- Không sinh debug symbols trong Release -->
     <DebugType Condition="'$(Configuration)' == 'Release'">none</DebugType>
     <DebugSymbols Condition="'$(Configuration)' == 'Release'">false</DebugSymbols>
 
-    <!-- Self-contained single file -->
     <SelfContained>true</SelfContained>
     <WindowsAppSDKSelfContained>true</WindowsAppSDKSelfContained>
-    <!-- <PublishSingleFile>true</PublishSingleFile>
-    <IncludeNativeLibrariesForSelfExtract>true</IncludeNativeLibrariesForSelfExtract>
-    <EnableCompressionInSingleFile>true</EnableCompressionInSingleFile> -->
 
     <PublishTrimmed>false</PublishTrimmed>
-    <!-- ReadyToRun tắt để giảm size: bỏ precompiled native code, khởi động chậm hơn chút -->
     <PublishReadyToRun>false</PublishReadyToRun>
 
-    <!-- Chỉ giữ locale en-US và vi (Tiếng Anh + Tiếng Việt), loại bỏ ~50 thư mục locale thừa -->
     <SatelliteResourceLanguages>en-US;vi</SatelliteResourceLanguages>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <None Remove="Pages\MessengerPage.xaml" />
@@ -143,7 +133,6 @@
     <HasPackageAndPublishMenu>true</HasPackageAndPublishMenu>
   </PropertyGroup>
 
-  <!-- Xóa các thư mục locale thừa của WindowsAppSDK sau khi publish (Release only) -->
   <Target Name="RemoveUnusedLocales" AfterTargets="Publish" Condition="'$(Configuration)' == 'Release'">
     <PropertyGroup>
       <_PublishDirFull>$([System.IO.Path]::GetFullPath('$(PublishDir)'))</_PublishDirFull>
@@ -152,7 +141,6 @@
     <Message Text="Removed unused locale folders from $(_PublishDirFull)" Importance="high" />
   </Target>
 
-  <!-- Xóa locale thừa sau khi build thông thường (Release only) -->
   <Target Name="RemoveUnusedLocalesAfterBuild" AfterTargets="Build" Condition="'$(Configuration)' == 'Release'">
     <PropertyGroup>
       <_OutDirFull>$([System.IO.Path]::GetFullPath('$(OutDir)'))</_OutDirFull>
