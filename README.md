@@ -7,7 +7,7 @@
 ## Tính năng
 
 - **Giao diện tích hợp**: Facebook Messenger, Zalo, Microsoft Teams nằm trên thanh điều hướng bên trái — chuyển tab tức thì, không cần mở nhiều trình duyệt.
-- **Thêm server chat tuỳ chỉnh**: Hỗ trợ thêm bất kỳ trang web chat nào (Mattermost, Rocket.Chat, Discord, …) bằng cách nhập URL và chọn icon từ bộ Segoe MDL2 Assets.
+- **Thêm server chat tuỳ chỉnh**: Hỗ trợ thêm bất kỳ trang web chat nào (Mattermost, Rocket.Chat, Discord, …) bằng cách nhập URL và chọn icon từ bộ Segoe MDL2 Assets hoặc ảnh tùy chỉnh.
 - **Phiên đăng nhập độc lập**: Mỗi ứng dụng/server có profile WebView2 riêng (lưu tại `%LOCALAPPDATA%\AllinOneMessenger\Profiles\`) — đăng nhập một lần, lưu mãi, không ảnh hưởng lẫn nhau.
 - **Thông báo hệ thống**: Hook JavaScript `window.Notification` và `ServiceWorkerRegistration.showNotification` để chuyển thông báo từ trang web thành Windows Toast Notification.
 - **Badge đếm tin nhắn**: Hiển thị số tin chưa đọc trên taskbar và icon tab điều hướng.
@@ -15,6 +15,7 @@
 - **Mica backdrop**: Hiệu ứng trong suốt Mica của Windows 11.
 - **Tự động lưu cài đặt**: Toàn bộ cài đặt (theme, chế độ thông báo, danh sách server tùy chỉnh) được lưu vào `%LOCALAPPDATA%\AllMessenger\settings.json`.
 - **Splash screen**: Màn hình khởi động fade-out sau khi tất cả WebView tải xong.
+- **Cập nhật phiên bản**: Màn hình setting có thể kiểm tra phiên bản mới nhất và chọn dowload về.
 
 ---
 
@@ -50,11 +51,18 @@ All_Messenger/
 │   ├── WebViewPageBase.cs          # Lớp cơ sở chung cho mọi tab WebView
 │   ├── WebViewProfileHelper.cs     # Quản lý CoreWebView2Environment / profile độc lập
 │   ├── WebViewNotificationHelper.cs# Inject JS hook bắt Notification API
+│   ├── WebViewKeyEventBus.cs       # Tạo và bắt sự kiện khi người dùng nhấn phím tắt
 │   ├── AppSettings.cs              # Lưu/đọc cài đặt từ settings.json
-│   └── CustomServerInfo.cs         # Model thông tin server tuỳ chỉnh
+│   ├── AppLogger.cs                # Lưu thông tin log vào file error.log
+│   ├── AppDialog.cs                # Tạo dialog popup common cho app
 │
 ├── Services/
+│   ├── UpdateService.cs            # Xử lý http client gọi tới API của git hub
 │   └── NotificationService.cs      # Singleton: toast, taskbar badge, trạng thái session
+│
+├── Models/
+│   ├── GitHubReleaseInfo.cs        # Model dùng cho xử lý dowload file từ github
+│   └── CustomServerInfo.cs         # Model thông tin server tuỳ chỉnh
 │
 ├── Assets/                         # Icon app, logo, icon Messenger/Zalo/Teams (light & dark)
 └── installer/
@@ -102,4 +110,5 @@ Kết quả publish nằm tại `bin\Release\net8.0-windows10.0.19041.0\win-x64\
 | ------------------------------- | ---------------------------------------------------- |
 | Cài đặt ứng dụng                | `%LOCALAPPDATA%\AllinOneMessenger\settings.json`     |
 | Ghi lỗi                         | `%LOCALAPPDATA%\AllinOneMessenger\error.log`         |
+| Icon cusom cho từng server      | `%LOCALAPPDATA%\AllinOneMessenger\ServerIcons\` |
 | Profile WebView (cookie, cache) | `%LOCALAPPDATA%\AllinOneMessenger\Profiles\<AppId>\` |
