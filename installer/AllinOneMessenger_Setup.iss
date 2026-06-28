@@ -1,4 +1,4 @@
-; ============================================================
+﻿; ============================================================
 ;  All-in-One Messenger — Inno Setup Script
 ;  Yêu cầu: Inno Setup 6.x  https://jrsoftware.org/isinfo.php
 ;
@@ -8,7 +8,7 @@
 ; ============================================================
 
 #define AppName      "All-in-One Messenger"
-#define AppVersion   "1.0.6"
+#define AppVersion   "1.0.7"
 #define AppPublisher "MrRom"
 #define AppExeName   "AllinOneMessenger.exe"
 #define AppIcon      "..\Assets\icon.ico"
