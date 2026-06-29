@@ -149,7 +149,7 @@ public abstract class WebViewPageBase : Page
         settings.AreBrowserAcceleratorKeysEnabled = false;
         settings.IsSwipeNavigationEnabled = false;
         // Turn on to debug and test
-        settings.AreDefaultContextMenusEnabled = false;
+        settings.AreDefaultContextMenusEnabled = true;
     }
 
     /// <summary>

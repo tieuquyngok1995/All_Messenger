@@ -530,14 +530,14 @@ public sealed partial class MainWindow : Window
         UpdateNavItemTooltips();
     }
 
-    IconElement BuildIcon(CustomServerInfo s)
+    private static IconElement BuildIcon(CustomServerInfo s)
     {
         if (s.IconType == IconType.Image && File.Exists(s.IconName))
             return new ImageIcon { Source = new BitmapImage(new Uri(s.IconName, UriKind.Absolute)) };
         return new FontIcon
         {
             FontFamily = new FontFamily("Segoe MDL2 Assets"),
-            Glyph = s.IconType == IconType.Glyph ? s.IconName : "\uE774" // fallback nếu file mất
+            Glyph = s.IconType == IconType.Glyph ? s.IconName : "\uE774"
         };
     }
     #endregion

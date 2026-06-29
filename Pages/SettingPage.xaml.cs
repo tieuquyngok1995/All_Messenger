@@ -170,8 +170,11 @@ public sealed partial class SettingPage : Page
         servers.Add(info);
         AppSettings.SaveCustomServers(servers);
 
-        CustomServers.Add(info);
-        App.MainWindow?.AddCustomServerTab(info);
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            CustomServers.Add(info);
+            App.MainWindow?.AddCustomServerTab(info);
+        });
     }
 
     /// <summary>
@@ -208,7 +211,10 @@ public sealed partial class SettingPage : Page
         }
         AppSettings.SaveCustomServers(servers);
 
-        App.MainWindow?.UpdateCustomServerTab(id, server, url);
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            App.MainWindow?.UpdateCustomServerTab(id, server, url);
+        });
     }
 
     /// <summary>
@@ -256,7 +262,10 @@ public sealed partial class SettingPage : Page
         for (int i = 0; i < servers.Count; i++) servers[i].Order = i;
         AppSettings.SaveCustomServers(servers);
 
-        App.MainWindow?.RemoveCustomServerTab(id);
+        DispatcherQueue.TryEnqueue(() =>
+        {
+            App.MainWindow?.RemoveCustomServerTab(id);
+        });
     }
 
     /// <summary>
