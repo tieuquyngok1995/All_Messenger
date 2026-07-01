@@ -9,6 +9,7 @@ using System.Drawing.Drawing2D;
 using System.Drawing.Imaging;
 using System.Drawing.Text;
 using System.Runtime.InteropServices;
+using System.Text;
 using Windows.Data.Xml.Dom;
 using Windows.UI.Notifications;
 
@@ -149,10 +150,10 @@ public sealed class NotificationService
             {
                 string displayName = GetAppDisplayName(appId);
                 var displayTitle = !string.IsNullOrWhiteSpace(title) ? $"[{displayName}] {title}" : displayName;
-                var builder = new AppNotificationBuilder().AddArgument("appId", appId).AddArgument("action", "focus").AddText(displayTitle);
+                var builder = new AppNotificationBuilder().AddArgument("appId", appId).AddArgument("action", "focus").AddText(SanitizeToastText(displayTitle));
 
                 if (!string.IsNullOrWhiteSpace(body))
-                    builder.AddText(body);
+                    builder.AddText(SanitizeToastText(body));
 
                 if (appId != AppIdZalo && !string.IsNullOrWhiteSpace(icon) && Uri.TryCreate(icon, UriKind.Absolute, out var iconUri))
                     builder.SetAppLogoOverride(iconUri, AppNotificationImageCrop.Circle);
@@ -285,6 +286,23 @@ public sealed class NotificationService
             else
                 ApplyOverlay();
         }
+    }
+
+    private static string SanitizeToastText(string? text)
+    {
+        if (string.IsNullOrEmpty(text)) return string.Empty;
+
+        var sb = new StringBuilder(text.Length);
+        foreach (var c in text)
+        {
+            if (c is '&' or '<' or '>' or '"' or '\'')
+                continue;
+            if (char.IsSurrogate(c))
+                continue;
+
+            sb.Append(c);
+        }
+        return sb.ToString().Trim();
     }
 
     #region ITaskbarList3 COM interop

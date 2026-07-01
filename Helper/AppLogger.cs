@@ -35,7 +35,7 @@ public static class AppLogger
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
-            var entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{source}]{Environment.NewLine}{ex}{Environment.NewLine}{new string('-', 80)}{Environment.NewLine}";
+            var entry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{source}]{Environment.NewLine}{ex}{Environment.NewLine}{new string('-', 80)}{Environment.NewLine}";
             File.AppendAllText(LogPath, entry);
         }
         catch { }
@@ -51,7 +51,7 @@ public static class AppLogger
         try
         {
             Directory.CreateDirectory(Path.GetDirectoryName(LogPath)!);
-            var entry = $"[{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{source}] {message}{Environment.NewLine}{new string('-', 80)}{Environment.NewLine}";
+            var entry = $"{DateTime.Now:yyyy-MM-dd HH:mm:ss}] [{source}] {message}{Environment.NewLine}{new string('-', 80)}{Environment.NewLine}";
             File.AppendAllText(LogPath, entry);
         }
         catch { }
