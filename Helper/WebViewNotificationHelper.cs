@@ -235,6 +235,14 @@ public static class WebViewNotificationHelper
                         e.stopPropagation();
                         return;
                     }
+                    
+                    // refresh page
+                    if (alt && e.key === 'F5') {
+                        postShortcut('refreshPage');
+                        e.preventDefault();
+                        e.stopPropagation();
+                        return;
+                    }
                 }, true);
             })();
         """;
@@ -325,6 +333,10 @@ public static class WebViewNotificationHelper
                 else if (action.Equals("prevTab"))
                 {
                     WebViewKeyEventBus.Raise(new WebViewKeyCombo(WebViewKeyAction.PrevTab));
+                }
+                else if (action.Equals("refreshPage"))
+                {
+                    WebViewKeyEventBus.Raise(new WebViewKeyCombo(WebViewKeyAction.RefreshPage));
                 }
 
                 return;

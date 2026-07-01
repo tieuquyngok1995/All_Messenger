@@ -2,7 +2,7 @@
 
 namespace All_in_One_Messenger.Helper;
 
-public enum WebViewKeyAction { SwitchTab, NextTab, PrevTab }
+public enum WebViewKeyAction { SwitchTab, NextTab, PrevTab, RefreshPage }
 
 public record WebViewKeyCombo(WebViewKeyAction Action, int TabIndex = -1);
 
