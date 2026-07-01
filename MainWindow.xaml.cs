@@ -206,6 +206,26 @@ public sealed partial class MainWindow : Window
     #endregion
 
     #region Event screen operation
+    private void Back_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_activeTab)) return;
+        if (_tabs.TryGetValue(_activeTab, out var entry))
+        {
+            try
+            {
+                var (webView, _) = GetWebViewInfo(entry.AppId);
+                if (webView != null && webView.CanGoBack)
+                {
+                    webView.GoBack();
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Log($"[MainWindow] Back_Click: {entry.AppId} error: {ex.Message}", ex);
+            }
+        }
+    }
+
     private void Reload_Click(object sender, RoutedEventArgs e)
     {
         if (string.IsNullOrEmpty(_activeTab)) return;
@@ -256,6 +276,16 @@ public sealed partial class MainWindow : Window
                 e.Handled = true;
                 break;
 
+            case VirtualKey.F5:
+                if (string.IsNullOrEmpty(_activeTab)) break;
+                if (_tabs.TryGetValue(_activeTab, out var entry))
+                {
+                    var (webView, _) = GetWebViewInfo(entry.AppId);
+                    webView?.Reload();
+                }
+                e.Handled = true;
+                break;
+
             case VirtualKey.Number1: case VirtualKey.NumberPad1: SelectTabByIndex(menuItems, 0); e.Handled = true; break;
             case VirtualKey.Number2: case VirtualKey.NumberPad2: SelectTabByIndex(menuItems, 1); e.Handled = true; break;
             case VirtualKey.Number3: case VirtualKey.NumberPad3: SelectTabByIndex(menuItems, 2); e.Handled = true; break;
@@ -290,6 +320,16 @@ public sealed partial class MainWindow : Window
             case WebViewKeyAction.PrevTab:
                 int prevIndex = (currentIndex - 1 + menuItems.Count) % menuItems.Count;
                 NavView.SelectedItem = menuItems[prevIndex];
+                break;
+
+            case WebViewKeyAction.RefreshPage:
+                if (string.IsNullOrEmpty(_activeTab)) break;
+
+                if (_tabs.TryGetValue(_activeTab, out var entry))
+                {
+                    var (webView, _) = GetWebViewInfo(entry.AppId);
+                    webView?.Reload();
+                }
                 break;
         }
     }

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Window
     x:Class="All_in_One_Messenger.MainWindow"
     xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
@@ -34,6 +34,10 @@
                         Grid.Column="1"
                         Margin="0,0,142,0"
                         Orientation="Horizontal">
+
+                <Button Click="Back_Click" Style="{StaticResource TitleBarButtonStyle}">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72B;" FontSize="16" ToolTipService.ToolTip="Quay lại trang"/>
+                </Button>
 
                 <Button Click="Reload_Click" Style="{StaticResource TitleBarButtonStyle}">
                     <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xe72c;" FontSize="16" ToolTipService.ToolTip="Tải lại trang"/>
