@@ -15,6 +15,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.System;
 using WinRT.Interop;
 
@@ -240,6 +241,30 @@ public sealed partial class MainWindow : Window
             catch (Exception ex)
             {
                 AppLogger.Log($"[MainWindow] Reload_Click: {entry.AppId} error: {ex.Message}", ex);
+            }
+        }
+    }
+
+    private void Share_Click(object sender, RoutedEventArgs e)
+    {
+        if (string.IsNullOrEmpty(_activeTab)) return;
+        if (_tabs.TryGetValue(_activeTab, out var entry))
+        {
+            try
+            {
+                var (webView, _) = GetWebViewInfo(entry.AppId);
+                string? currentUrl = webView?.CoreWebView2?.Source ?? webView?.Source?.ToString();
+
+                if (!string.IsNullOrEmpty(currentUrl))
+                {
+                    var dataPackage = new DataPackage();
+                    dataPackage.SetText(currentUrl);
+                    Clipboard.SetContent(dataPackage);
+                }
+            }
+            catch (Exception ex)
+            {
+                AppLogger.Log($"[MainWindow] Share_Click: {entry.AppId} error: {ex.Message}", ex);
             }
         }
     }

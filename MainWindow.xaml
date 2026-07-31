@@ -40,7 +40,11 @@
                 </Button>
 
                 <Button Click="Reload_Click" Style="{StaticResource TitleBarButtonStyle}">
-                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xe72c;" FontSize="16" ToolTipService.ToolTip="Tải lại trang"/>
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72C;" FontSize="16" ToolTipService.ToolTip="Tải lại trang"/>
+                </Button>
+
+                <Button Click="Share_Click" Style="{StaticResource TitleBarButtonStyle}">
+                    <FontIcon FontFamily="Segoe MDL2 Assets" Glyph="&#xE72D;" FontSize="16" ToolTipService.ToolTip="Chia sẻ trang"/>
                 </Button>
 
                 <ToggleButton x:Name="DarkModeToggle"
